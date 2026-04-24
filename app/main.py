@@ -58,7 +58,7 @@ def init_db():
         """
         CREATE TABLE IF NOT EXISTS devices (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER NOT NULL DEFAULT 1,
+            user_id INTEGER,
             device_id TEXT NOT NULL,
             device_name TEXT,
             token_hash TEXT,
@@ -134,16 +134,14 @@ def get_or_create_device(device_id):
         (device_id,)
     ).fetchone()
     if not row:
-        user_id = create_pending_user(conn)
-        provision_source = "first-visit"
-        trusted = 0
+        # 新设备不自动分配 user_id，显示着陆页让用户选择
         conn.execute(
-            "INSERT INTO devices (user_id, device_id, device_name, trusted, provision_source) VALUES (?, ?, 'Unknown', ?, ?)",
-            (user_id, device_id, trusted, provision_source)
+            "INSERT INTO devices (device_id, device_name, trusted, provision_source, user_id) VALUES (?, 'Unknown', 0, 'first-visit', NULL)",
+            (device_id,)
         )
         conn.commit()
         row = conn.execute(
-            "SELECT d.id, d.user_id, d.device_id, d.device_name, d.trusted, d.provision_source, d.pending_approval, u.approval_status, u.join_code, u.name AS user_name FROM devices d JOIN users u ON u.id = d.user_id WHERE d.device_id = ?",
+            "SELECT d.id, d.user_id, d.device_id, d.device_name, d.trusted, d.provision_source, d.pending_approval, u.approval_status, u.join_code, u.name AS user_name FROM devices d LEFT JOIN users u ON u.id = d.user_id WHERE d.device_id = ?",
             (device_id,)
         ).fetchone()
     conn.execute(
@@ -513,6 +511,12 @@ def index():
     if not device_id:
         device_id = str(uuid.uuid4())
     device = get_or_create_device(device_id)
+    # 新用户（未加入任何组）显示着陆页
+    if not device.get("user_id"):
+        resp = make_response(render_template("index_landing.html"))
+        resp.set_cookie("qc_device_id", device_id, max_age=31536000, httponly=True)
+        return resp
+    # 已批准设备显示采集界面
     items = []
     if device.get("approval_status") == "approved" and not device.get("pending_approval"):
         items = get_items(device["user_id"])
@@ -551,6 +555,48 @@ def join_page():
         device_id = str(uuid.uuid4())
     device = get_or_create_device(device_id)
     resp = make_response(render_template("join.html", device=device, error=None, success=None))
+    resp.set_cookie("qc_device_id", device_id, max_age=31536000, httponly=True)
+    return resp
+
+
+@app.route("/create-group", methods=["GET"])
+def create_group_page():
+    device_id = request.cookies.get("qc_device_id")
+    if not device_id:
+        device_id = str(uuid.uuid4())
+    device = get_or_create_device(device_id)
+    resp = make_response(render_template("create_group.html", device=device))
+    resp.set_cookie("qc_device_id", device_id, max_age=31536000, httponly=True)
+    return resp
+
+
+@app.route("/create-group", methods=["POST"])
+def create_group_submit():
+    device_id = request.cookies.get("qc_device_id")
+    if not device_id:
+        device_id = str(uuid.uuid4())
+    device = get_or_create_device(device_id)
+    group_name = request.form.get("group_name", "").strip()
+    if not group_name:
+        resp = make_response(render_template("create_group.html", device=device, error="请输入组名"))
+        resp.set_cookie("qc_device_id", device_id, max_age=31536000, httponly=True)
+        return resp
+    # 创建新组（pending 状态，等待管理员批准）
+    conn = get_conn()
+    now = datetime.now().isoformat(timespec="seconds")
+    join_code = generate_join_code()
+    conn.execute(
+        "INSERT INTO users (name, approval_status, join_code, created_at) VALUES (?, 'pending', ?, ?)",
+        (group_name, join_code, now),
+    )
+    user_id = conn.execute("SELECT last_insert_rowid() AS id").fetchone()["id"]
+    conn.execute(
+        "UPDATE devices SET user_id = ?, provision_source = 'create-group', pending_approval = 1 WHERE device_id = ?",
+        (user_id, device_id),
+    )
+    conn.commit()
+    conn.close()
+    resp = make_response(render_template("create_group.html", device=device, success="组已创建，等待管理员批准"))
     resp.set_cookie("qc_device_id", device_id, max_age=31536000, httponly=True)
     return resp
 

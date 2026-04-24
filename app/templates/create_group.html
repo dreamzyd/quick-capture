@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>新建组 - 记一下</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <main class="container compact-page">
+    <header class="header capture-header">
+      <h1>新建组</h1>
+      <p class="subtitle">创建你自己的记录组，需要管理员批准后才能使用。</p>
+      {% if device %}
+        <p class="device-info">当前设备：{{ device.device_name or '新设备' }}</p>
+      {% endif %}
+    </header>
+
+    <section class="capture-box capture-box-focus">
+      {% if error %}
+        <p class="error-text">{{ error }}</p>
+      {% endif %}
+      {% if success %}
+        <div class="capture-feedback">{{ success }}</div>
+      {% endif %}
+      <form action="/create-group" method="post">
+        <input type="text" name="group_name" placeholder="输入组名（如：我的工作、我的家庭）" required autofocus maxlength="80" />
+        <div class="action-row action-row-focus">
+          <button type="submit" class="primary primary-big">创建组</button>
+        </div>
+      </form>
+    </section>
+
+    <section class="quick-links" style="justify-content: center;">
+      <a class="subtle-link" href="/">返回首页</a>
+      <a class="subtle-link" href="/join">加入已有组</a>
+    </section>
+  </main>
+</body>
+</html>
