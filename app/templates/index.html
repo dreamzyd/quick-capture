@@ -10,11 +10,24 @@
 <body>
   <main class="container compact-page">
     <header class="header capture-header">
-      <h1>记一下</h1>
-      <p class="subtitle">先记下来，别打断自己。</p>
-      {% if device %}
-        <p class="device-info">当前记录组：{{ device.user_name or '未命名记录组' }}</p>
-      {% endif %}
+      <div class="title-row">
+        <div>
+          <h1>记一下</h1>
+          <p class="subtitle">先记下来，别打断自己。</p>
+          {% if device %}
+            <p class="device-info">当前记录组：{{ device.user_name or '未命名记录组' }}</p>
+          {% endif %}
+        </div>
+        <div class="toolbar-actions">
+          <a class="nav-link" href="/me">我的账号</a>
+          {% if is_admin %}
+            <a class="nav-link" href="/admin/accounts">管理员后台</a>
+            <form action="/admin/logout" method="post" class="inline-form-row">
+              <button type="submit" class="danger compact">退出管理员</button>
+            </form>
+          {% endif %}
+        </div>
+      </div>
     </header>
 
     <section class="capture-box capture-box-focus">
@@ -51,8 +64,7 @@
     </section>
 
     <section class="quick-links">
-      <a class="subtle-link" href="/me">我的账号</a>
-      <a class="subtle-link" href="/join">加入已有账号</a>
+      <a class="subtle-link" href="/join">加入已有组</a>
     </section>
   </main>
 

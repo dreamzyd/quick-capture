@@ -12,13 +12,15 @@
       <div class="title-row">
         <div>
           <h1>我的账号</h1>
-          <p class="subtitle">这里放你的账号、加入码和当前账号下的设备。管理员后台不再混在这里。</p>
+          <p class="subtitle">这里放你的账号、加入码和当前账号下的设备。</p>
         </div>
         <div class="toolbar-actions">
           <a class="nav-link" href="/">返回首页</a>
           {% if is_admin %}
             <a class="nav-link" href="/admin/accounts">管理员后台</a>
-            <a class="nav-link" href="/admin/logout">退出管理员</a>
+            <form action="/admin/logout" method="post" class="inline-form-row">
+              <button type="submit" class="danger compact">退出管理员</button>
+            </form>
           {% endif %}
         </div>
       </div>
@@ -85,11 +87,6 @@
         {% if token_success %}
           <div class="item-meta" style="color: var(--success); margin-top: 8px;">{{ token_success }}</div>
         {% endif %}
-      </article>
-      <article class="summary-card">
-        <div class="summary-label">设备数</div>
-        <div class="summary-value">{{ summary.device_count }}</div>
-        <div class="item-meta">记录数：{{ summary.item_count }}</div>
       </article>
     </section>
 

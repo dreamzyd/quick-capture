@@ -3,18 +3,17 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>加入账号 - 记一下</title>
+  <title>加入已有组 - 记一下</title>
   <link rel="stylesheet" href="/static/style.css" />
 </head>
 <body>
   <main class="container compact-page">
     <header class="header capture-header">
-      <h1>加入已有账号</h1>
-      <p class="subtitle">把这台设备加入你已经开通的账号，这样手机、电脑、Pad 就能共享同一份记录。</p>
+      <h1>加入已有组</h1>
+      <p class="subtitle">把这台设备加入你已经开通的组，这样手机、电脑、Pad 就能共享同一份记录。</p>
       {% if device %}
         <p class="device-info">当前设备：{{ device.device_name or '新设备' }}</p>
       {% endif %}
-      <p><a class="subtle-link" href="/">返回首页</a></p>
     </header>
 
     <section class="capture-box capture-box-focus">
@@ -25,11 +24,16 @@
         <div class="capture-feedback">{{ success }}</div>
       {% endif %}
       <form action="/join" method="post">
-        <input type="text" name="join_code" placeholder="输入账号加入码" required autofocus />
+        <input type="text" name="join_code" placeholder="输入组加入码" required autofocus />
         <div class="action-row action-row-focus">
-          <button type="submit" class="primary primary-big">加入账号</button>
+          <button type="submit" class="primary primary-big">加入组</button>
         </div>
       </form>
+    </section>
+
+    <section class="quick-links" style="justify-content: center;">
+      <a class="subtle-link" href="/">返回首页</a>
+      <a class="subtle-link" href="/create-group">新建组</a>
     </section>
   </main>
 </body>

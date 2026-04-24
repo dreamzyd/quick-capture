@@ -105,6 +105,11 @@ def admin_guard():
     return redirect(url_for("admin_login_page", next=next_path))
 
 
+def is_admin_view():
+    """检查当前是否是管理员视角（用于在普通页面显示管理员入口）"""
+    return is_admin_authenticated()
+
+
 def generate_join_code():
     return uuid.uuid4().hex[:12]
 
@@ -590,6 +595,7 @@ def create_group_submit():
         (group_name, join_code, now),
     )
     user_id = conn.execute("SELECT last_insert_rowid() AS id").fetchone()["id"]
+    # 首台设备自动绑定到新建组，但仍需管理员批准
     conn.execute(
         "UPDATE devices SET user_id = ?, provision_source = 'create-group', pending_approval = 1 WHERE device_id = ?",
         (user_id, device_id),
