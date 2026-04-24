@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>设备管理 - 记一下</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <main class="container">
+    <header class="header">
+      <div class="title-row">
+        <div>
+          <h1>设备管理</h1>
+          <p class="subtitle">现在把设备拆成“已认领”和“待认领”，陌生访问不会直接混进正式设备池。</p>
+        </div>
+        <div class="toolbar-actions">
+          <a class="nav-link" href="/">返回首页</a>
+          <form action="/admin/logout" method="post" class="inline-form-row">
+            <button type="submit" class="danger compact">退出管理员</button>
+          </form>
+        </div>
+      </div>
+    </header>
+
+    {% if pending_devices %}
+      <section class="section-block">
+        <h2 class="section-title">待认领设备</h2>
+        <div class="list">
+          {% for device in pending_devices %}
+            <article class="item">
+              <div class="item-main grow">
+                <form class="rename-form" action="/devices/rename/{{ device.device_id }}" method="post">
+                  <label class="field-label" for="pending-device-name-{{ loop.index }}">设备名称</label>
+                  <div class="inline-form-row">
+                    <input id="pending-device-name-{{ loop.index }}" name="device_name" value="{{ device.device_name or 'Unknown' }}" maxlength="80" required />
+                    <button type="submit" class="secondary-button compact">保存名称</button>
+                  </div>
+                </form>
+                <div class="item-meta">device_id: {{ device.device_id }}</div>
+                <div class="item-meta">来源：{{ device.provision_source or 'direct' }}</div>
+                <div class="item-meta">关联记录数：{{ device.item_count }}</div>
+                <div class="item-meta">创建时间：{{ device.created_at or '-' }}</div>
+                <div class="item-meta">最近活跃：{{ device.last_seen_at or '-' }}</div>
+              </div>
+              <div class="item-actions">
+                <span class="status-badge pending">待认领</span>
+                <form action="/devices/approve/{{ device.device_id }}" method="post" class="full-width-form">
+                  <button type="submit" class="success">批准加入</button>
+                </form>
+                <form action="/devices/toggle-trusted/{{ device.device_id }}" method="post" class="full-width-form">
+                  <button type="submit" class="secondary-button compact">{{ '取消信任' if device.trusted else '先设为信任' }}</button>
+                </form>
+              </div>
+            </article>
+          {% endfor %}
+        </div>
+      </section>
+    {% endif %}
+
+    <section class="section-block">
+      <h2 class="section-title">已认领设备</h2>
+      <div class="list">
+        {% if approved_devices %}
+          {% for device in approved_devices %}
+            <article class="item">
+              <div class="item-main grow">
+                <form class="rename-form" action="/devices/rename/{{ device.device_id }}" method="post">
+                  <label class="field-label" for="device-name-{{ loop.index }}">设备名称</label>
+                  <div class="inline-form-row">
+                    <input id="device-name-{{ loop.index }}" name="device_name" value="{{ device.device_name or 'Unknown' }}" maxlength="80" required />
+                    <button type="submit" class="secondary-button compact">保存名称</button>
+                  </div>
+                </form>
+                <div class="item-meta">device_id: {{ device.device_id }}</div>
+                <div class="item-meta">来源：{{ device.provision_source or 'direct' }}</div>
+                <div class="item-meta">账号 ID：{{ device.user_id }}</div>
+                <div class="item-meta">关联记录数：{{ device.item_count }}</div>
+                <div class="item-meta">创建时间：{{ device.created_at or '-' }}</div>
+                <div class="item-meta">最近活跃：{{ device.last_seen_at or '-' }}</div>
+              </div>
+              <div class="item-actions">
+                <span class="status-badge trusted">已认领</span>
+                <form action="/devices/toggle-trusted/{{ device.device_id }}" method="post" class="full-width-form">
+                  <button type="submit" class="{% if device.trusted %}danger{% else %}success{% endif %}">{{ '取消信任' if device.trusted else '设为信任' }}</button>
+                </form>
+                <a class="secondary-button compact" href="/devices/{{ device.device_id }}/items">看这台设备的记录</a>
+              </div>
+            </article>
+          {% endfor %}
+        {% else %}
+          <div class="empty">还没有已认领设备。</div>
+        {% endif %}
+      </div>
+    </section>
+  </main>
+</body>
+</html>

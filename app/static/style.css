@@ -1,0 +1,87 @@
+:root {
+  color-scheme: light dark;
+  --bg: #0f1115;
+  --panel: #171a21;
+  --panel-2: #202531;
+  --text: #eef2f7;
+  --muted: #9aa4b2;
+  --accent: #4f8cff;
+  --danger: #e25b5b;
+  --border: #2b3240;
+  --success: #5bd88e;
+  --warning: #f0c35b;
+}
+body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: var(--bg); color: var(--text); -webkit-tap-highlight-color: transparent; }
+.container { max-width: 760px; margin: 0 auto; padding: 16px; }
+.compact-page { max-width: 720px; }
+.title-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.toolbar-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+.header h1 { margin: 0 0 6px 0; font-size: 28px; }
+.header p { color: var(--muted); margin: 0 0 8px 0; font-size: 14px; line-height: 1.5; }
+.capture-header { margin-bottom: 14px; }
+.capture-header h1 { font-size: 32px; }
+.capture-header .subtitle { font-size: 16px; }
+.device-info { font-size: 12px; padding: 6px 10px; background: var(--panel-2); border-radius: 8px; display: inline-block; margin-top: 4px; }
+.capture-box, .item, .empty, .toolbar, .summary-card { background: var(--panel); border: 1px solid var(--border); border-radius: 14px; }
+.capture-box { padding: 14px; margin-bottom: 18px; }
+.capture-box-focus { padding: 16px; border-radius: 18px; }
+textarea, input { width: 100%; min-height: 0; resize: vertical; border-radius: 12px; border: 1px solid var(--border); background: var(--panel-2); color: var(--text); padding: 14px; box-sizing: border-box; font-size: 16px; line-height: 1.5; font-family: inherit; }
+textarea { min-height: 140px; }
+textarea:focus, input:focus { outline: 2px solid var(--accent); border-color: transparent; }
+.action-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-top: 12px; }
+.action-row-focus { align-items: stretch; }
+.toolbar { display: flex; gap: 10px; padding: 12px 14px; margin-bottom: 18px; flex-wrap: wrap; }
+button, .secondary-button, .nav-link { border: 0; border-radius: 10px; background: var(--accent); color: white; padding: 12px 20px; cursor: pointer; font-size: 15px; font-weight: 500; transition: transform 0.05s ease, opacity 0.1s ease; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; box-sizing: border-box; }
+button:active, .secondary-button:active, .nav-link:active { transform: scale(0.98); }
+button.primary { min-width: 100px; }
+button.primary-big { min-height: 52px; padding: 14px 20px; font-size: 18px; width: 220px; }
+button.compact, .secondary-button.compact { padding: 10px 14px; font-size: 14px; white-space: nowrap; }
+button.danger { background: var(--danger); }
+button.success { background: var(--success); }
+.hint { color: var(--muted); font-size: 13px; }
+.inline-link, .subtle-link { color: var(--accent); text-decoration: none; }
+.inline-link:hover, .subtle-link:hover { text-decoration: underline; }
+.quick-links { display: flex; gap: 14px; flex-wrap: wrap; margin: 4px 0 18px; padding: 0 2px; }
+.search-section { margin-bottom: 18px; }
+.search-form { display: flex; gap: 10px; align-items: center; }
+.search-form input { flex: 1; padding: 12px 14px; font-size: 16px; }
+.clear-search { white-space: nowrap; color: var(--muted); }
+.clear-search:hover { color: var(--text); }
+.error-text { color: #ff8f8f; margin: 0 0 12px 0; }
+.hint-block { color: var(--muted); background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; margin-top: 10px; }
+.capture-feedback { color: var(--text); background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 14px; margin-bottom: 18px; }
+.list { display: grid; gap: 10px; }
+.summary-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-bottom: 18px; }
+.summary-card { padding: 16px; }
+.summary-label { color: var(--muted); font-size: 13px; margin-bottom: 8px; }
+.summary-value { font-size: 28px; font-weight: 700; }
+.summary-value.small { font-size: 20px; }
+.item { display: flex; justify-content: space-between; gap: 12px; padding: 14px; }
+.item-main.grow { flex: 1; }
+.item.done .item-content { text-decoration: line-through; color: var(--muted); }
+.item-content { font-size: 16px; line-height: 1.5; word-break: break-word; }
+.item-meta { margin-top: 6px; color: var(--muted); font-size: 12px; word-break: break-all; }
+.item-actions { display: flex; flex-direction: column; gap: 8px; min-width: 160px; align-items: flex-end; }
+.item-actions button { margin-top: 0; padding: 8px 12px; font-size: 14px; width: 100%; }
+.status-badge { display: inline-flex; align-items: center; justify-content: center; min-width: 84px; padding: 8px 12px; border-radius: 999px; font-size: 13px; font-weight: 600; }
+.status-badge.trusted { background: rgba(91, 216, 142, 0.16); color: var(--success); }
+.status-badge.pending { background: rgba(240, 195, 91, 0.16); color: var(--warning); }
+.field-label { display: block; color: var(--muted); font-size: 12px; margin-bottom: 6px; }
+.rename-form { margin-bottom: 8px; }
+.inline-form-row { display: flex; gap: 8px; align-items: center; }
+.full-width-form { width: 100%; }
+.empty { padding: 40px 20px; text-align: center; color: var(--muted); font-size: 15px; }
+@media (max-width: 640px) {
+  .container { padding: 12px; }
+  .header h1, .capture-header h1 { font-size: 28px; }
+  .item { flex-direction: column; }
+  .item-actions { flex-direction: column; width: 100%; align-items: stretch; }
+  .item-actions button, .status-badge { flex: 1; }
+  .summary-grid { grid-template-columns: 1fr; }
+  textarea { min-height: 180px; font-size: 17px; }
+  .action-row, .toolbar, .title-row, .inline-form-row, .toolbar-actions, .search-form { flex-direction: column; align-items: stretch; }
+  button.primary, .secondary-button, .nav-link, button.compact, button.primary-big { width: 100%; padding: 16px 20px; font-size: 18px; }
+  .quick-links { flex-direction: column; gap: 10px; }
+  .hint { text-align: center; }
+  .clear-search { display: block; text-align: center; margin-top: 8px; }
+}

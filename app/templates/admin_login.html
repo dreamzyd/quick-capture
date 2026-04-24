@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>管理员登录 - 记一下</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <main class="container compact-page">
+    <header class="header capture-header">
+      <h1>管理员登录</h1>
+      <p class="subtitle">设备管理和账号视图需要管理员验证，避免陌生人直接看到内部设备信息。</p>
+    </header>
+
+    <section class="capture-box capture-box-focus">
+      {% if error %}
+        <p class="error-text">{{ error }}</p>
+      {% endif %}
+      <form action="/admin/login" method="post">
+        <input type="password" name="password" placeholder="输入管理员密码" required autofocus />
+        <div class="action-row action-row-focus">
+          <button type="submit" class="primary primary-big">进入管理区</button>
+        </div>
+      </form>
+    </section>
+  </main>
+</body>
+</html>

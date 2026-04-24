@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>记一下</title>
+  <script src="https://unpkg.com/htmx.org@1.9.12"></script>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <main class="container compact-page">
+    <header class="header capture-header">
+      <h1>记一下</h1>
+      <p class="subtitle">先记下来，别打断自己。</p>
+      {% if device %}
+        <form class="rename-form" action="/devices/rename/{{ device.device_id }}" method="post">
+          <label class="field-label" for="current-device-name">当前设备名称</label>
+          <div class="inline-form-row">
+            <input id="current-device-name" name="device_name" value="{{ device.device_name or 'Unknown' }}" maxlength="80" required />
+            <button type="submit" class="secondary-button compact">保存名称</button>
+          </div>
+        </form>
+      {% endif %}
+    </header>
+
+    <section class="capture-box capture-box-focus">
+      <form
+        hx-post="/add"
+        hx-target="#home-items"
+        hx-swap="innerHTML"
+        hx-on::after-request="if(event.detail.successful){ this.reset(); this.querySelector('textarea').focus(); }"
+      >
+        <textarea id="capture-input" name="content" placeholder="想到什么就直接写，比如：给 XX 回消息、买纸巾、查一下活动时间..." autofocus required></textarea>
+        <div class="action-row action-row-focus">
+          <button type="submit" class="primary primary-big">立即记下</button>
+          <span class="hint">支持一次粘贴多行，桌面端按 Ctrl/⌘ + Enter 也能提交</span>
+        </div>
+      </form>
+    </section>
+
+    <section class="quick-links">
+      <a class="subtle-link" href="/me">我的账号</a>
+      {% if not device or device.approval_status != 'approved' %}
+        <a class="subtle-link" href="/join">加入已有账号</a>
+      {% endif %}
+    </section>
+
+    <section id="home-items">
+      {% if device and device.approval_status == 'approved' %}
+        {% include '_list.html' %}
+      {% else %}
+        <div class="capture-feedback">写进去了。当前账号还没开通前，这里先不展示历史记录。</div>
+      {% endif %}
+    </section>
+  </main>
+
+  <script>
+    const input = document.getElementById('capture-input');
+    input.addEventListener('keydown', function (e) {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+        e.preventDefault();
+        this.form.requestSubmit();
+      }
+    });
+  </script>
+</body>
+</html>

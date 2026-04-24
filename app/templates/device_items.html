@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>设备记录 - 记一下</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <main class="container">
+    <header class="header">
+      <div class="title-row">
+        <div>
+          <h1>设备记录</h1>
+          {% if device %}
+            <p class="subtitle">当前查看设备：{{ device.device_name or 'Unknown' }}，这里展示这台设备来源的记录。</p>
+          {% else %}
+            <p class="subtitle">设备不存在，或尚未识别到对应设备。</p>
+          {% endif %}
+        </div>
+        <div class="toolbar-actions">
+          <a class="nav-link" href="/account">返回账号概览</a>
+          <a class="nav-link" href="/devices">设备管理</a>
+        </div>
+      </div>
+    </header>
+
+    {% if device %}
+      <section class="summary-grid">
+        <article class="summary-card">
+          <div class="summary-label">设备名称</div>
+          <div class="summary-value small">{{ device.device_name or 'Unknown' }}</div>
+          <div class="item-meta">device_id: {{ device.device_id }}</div>
+        </article>
+        <article class="summary-card">
+          <div class="summary-label">账号 ID</div>
+          <div class="summary-value">{{ device.user_id }}</div>
+          <div class="item-meta">设备所属账号</div>
+        </article>
+        <article class="summary-card">
+          <div class="summary-label">信任状态</div>
+          <div class="summary-value small">{{ '已信任' if device.trusted else '待确认' }}</div>
+          <div class="item-meta">最近活跃：{{ device.last_seen_at or '-' }}</div>
+        </article>
+      </section>
+    {% endif %}
+
+    <section class="list">
+      {% if items %}
+        {% for item in items %}
+          <article class="item {% if item.status == 'done' %}done{% endif %}">
+            <div class="item-main grow">
+              <div class="item-content">{{ item.content }}</div>
+              <div class="item-meta">记录 ID：{{ item.id }}</div>
+              <div class="item-meta">账号 ID：{{ item.user_id }}</div>
+              <div class="item-meta">来源设备：{{ item.source_device_id or '-' }}</div>
+              <div class="item-meta">创建时间：{{ item.created_at or '-' }}</div>
+              <div class="item-meta">状态：{{ '已完成' if item.status == 'done' else '待处理' }}</div>
+            </div>
+          </article>
+        {% endfor %}
+      {% else %}
+        <div class="empty">这台设备下还没有记录。</div>
+      {% endif %}
+    </section>
+  </main>
+</body>
+</html>

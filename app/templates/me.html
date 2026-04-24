@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>我的账号 - 记一下</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <main class="container">
+    <header class="header">
+      <div class="title-row">
+        <div>
+          <h1>我的账号</h1>
+          <p class="subtitle">这里放你的账号、加入码和当前账号下的设备。管理员后台不再混在这里。</p>
+        </div>
+        <div class="toolbar-actions">
+          <a class="nav-link" href="/">返回首页</a>
+          {% if is_admin %}
+            <a class="nav-link" href="/admin/accounts">管理员后台</a>
+            <a class="nav-link" href="/admin/logout">退出管理员</a>
+          {% endif %}
+        </div>
+      </div>
+    </header>
+
+    <section class="summary-grid">
+      <article class="summary-card">
+        <div class="summary-label">账号名称</div>
+        <div class="summary-value">{{ summary.user.name }}</div>
+        <div class="item-meta">账号 ID：{{ summary.user.id }}</div>
+        <div class="item-meta">状态：{{ summary.user.approval_status }}</div>
+      </article>
+      <article class="summary-card">
+        <div class="summary-label">加入码</div>
+        <div class="summary-value small">{{ summary.user.join_code or '-' }}</div>
+        <div class="item-meta">新设备用这个码加入现有账号</div>
+      </article>
+      <article class="summary-card">
+        <div class="summary-label">设备数</div>
+        <div class="summary-value">{{ summary.device_count }}</div>
+        <div class="item-meta">记录数：{{ summary.item_count }}</div>
+      </article>
+    </section>
+
+    <section class="list">
+      {% if devices %}
+        {% for device in devices %}
+          <article class="item">
+            <div class="item-main grow">
+              <form class="rename-form" action="/devices/rename/{{ device.device_id }}" method="post">
+                <label class="field-label" for="me-device-name-{{ loop.index }}">设备名称</label>
+                <div class="inline-form-row">
+                  <input id="me-device-name-{{ loop.index }}" name="device_name" value="{{ device.device_name or 'Unknown' }}" maxlength="80" required {% if current_device_id != device.device_id %}disabled{% endif %}/>
+                  {% if current_device_id == device.device_id %}
+                    <button type="submit" class="secondary-button compact">保存名称</button>
+                  {% endif %}
+                </div>
+              </form>
+              <div class="item-content">{% if current_device_id == device.device_id %}当前设备{% else %}账号内设备{% endif %}</div>
+              <div class="item-meta">device_id: {{ device.device_id }}</div>
+              <div class="item-meta">来源：{{ device.provision_source or '-' }}</div>
+              <div class="item-meta">最近活跃：{{ device.last_seen_at or '-' }}</div>
+            </div>
+            <div class="item-actions">
+              {% if current_device_id == device.device_id %}
+                <span class="status-badge trusted">当前设备</span>
+              {% else %}
+                <span class="status-badge pending">账号内设备</span>
+              {% endif %}
+            </div>
+          </article>
+        {% endfor %}
+      {% else %}
+        <div class="empty">这个账号下还没有设备。</div>
+      {% endif %}
+    </section>
+  </main>
+</body>
+</html>

@@ -1,0 +1,13 @@
+version: '3.8'
+services:
+  quick-capture:
+    build: .
+    container_name: quick-capture
+    ports:
+      - "18901:18901"
+    volumes:
+      - ./data:/app/data
+    environment:
+      - QUICK_CAPTURE_DB=/app/data/quick_capture.db
+      - QUICK_CAPTURE_ADMIN_PASSWORD=QC-admin-20260424
+    restart: unless-stopped
