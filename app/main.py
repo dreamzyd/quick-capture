@@ -309,9 +309,9 @@ def join_account_by_code(device_id, join_code):
         conn.close()
         return False, "这个账号还没开通。"
     # 先检查设备是否已存在
-    existing = conn.execute("SELECT user_id FROM devices WHERE device_id = ?", (device_id,)).fetchone()
+    existing = conn.execute("SELECT user_id, pending_approval FROM devices WHERE device_id = ?", (device_id,)).fetchone()
     if existing:
-        # 设备已存在，改 user_id 但设为 pending
+        # 设备已存在，改 user_id 并重新设为 pending
         conn.execute(
             "UPDATE devices SET user_id = ?, provision_source = 'join-code', pending_approval = 1, last_seen_at = ? WHERE device_id = ?",
             (user["id"], datetime.now().isoformat(timespec="seconds"), device_id),
