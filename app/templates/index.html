@@ -33,7 +33,7 @@
     </section>
 
     <section id="capture-result">
-      {% if device and device.approval_status == 'approved' and items %}
+      {% if device and device.approval_status == 'approved' and not device.pending_approval and items %}
         <div class="subtle-list">
           <div class="subtle-list-header">
             <span class="subtle-list-title">最近记录</span>

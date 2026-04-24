@@ -130,7 +130,7 @@ def ensure_user_join_code(conn, user_id):
 def get_or_create_device(device_id):
     conn = get_conn()
     row = conn.execute(
-        "SELECT d.id, d.user_id, d.device_id, d.device_name, d.trusted, d.provision_source, u.approval_status, u.join_code, u.name AS user_name FROM devices d JOIN users u ON u.id = d.user_id WHERE d.device_id = ?",
+        "SELECT d.id, d.user_id, d.device_id, d.device_name, d.trusted, d.provision_source, d.pending_approval, u.approval_status, u.join_code, u.name AS user_name FROM devices d JOIN users u ON u.id = d.user_id WHERE d.device_id = ?",
         (device_id,)
     ).fetchone()
     if not row:
@@ -143,7 +143,7 @@ def get_or_create_device(device_id):
         )
         conn.commit()
         row = conn.execute(
-            "SELECT d.id, d.user_id, d.device_id, d.device_name, d.trusted, d.provision_source, u.approval_status, u.join_code, u.name AS user_name FROM devices d JOIN users u ON u.id = d.user_id WHERE d.device_id = ?",
+            "SELECT d.id, d.user_id, d.device_id, d.device_name, d.trusted, d.provision_source, d.pending_approval, u.approval_status, u.join_code, u.name AS user_name FROM devices d JOIN users u ON u.id = d.user_id WHERE d.device_id = ?",
             (device_id,)
         ).fetchone()
     conn.execute(
@@ -308,10 +308,20 @@ def join_account_by_code(device_id, join_code):
     if user["approval_status"] != "approved":
         conn.close()
         return False, "这个账号还没开通。"
-    conn.execute(
-        "UPDATE devices SET user_id = ?, provision_source = 'join-code', last_seen_at = ? WHERE device_id = ?",
-        (user["id"], datetime.now().isoformat(timespec="seconds"), device_id),
-    )
+    # 先检查设备是否已存在
+    existing = conn.execute("SELECT user_id FROM devices WHERE device_id = ?", (device_id,)).fetchone()
+    if existing:
+        # 设备已存在，改 user_id 但设为 pending
+        conn.execute(
+            "UPDATE devices SET user_id = ?, provision_source = 'join-code', pending_approval = 1, last_seen_at = ? WHERE device_id = ?",
+            (user["id"], datetime.now().isoformat(timespec="seconds"), device_id),
+        )
+    else:
+        # 新设备，创建并设为 pending
+        conn.execute(
+            "INSERT INTO devices (user_id, device_id, device_name, trusted, provision_source, pending_approval) VALUES (?, ?, 'Unknown', 0, 'join-code', 1)",
+            (user["id"], device_id),
+        )
     conn.execute(
         "UPDATE inbox_items SET user_id = ? WHERE source_device_id = ?",
         (user["id"], device_id),
@@ -503,7 +513,9 @@ def index():
     if not device_id:
         device_id = str(uuid.uuid4())
     device = get_or_create_device(device_id)
-    items = get_items(device["user_id"]) if device.get("approval_status") == "approved" else []
+    items = []
+    if device.get("approval_status") == "approved" and not device.get("pending_approval"):
+        items = get_items(device["user_id"])
     resp = make_response(render_template("index.html", device=device, items=items))
     resp.set_cookie("qc_device_id", device_id, max_age=31536000, httponly=True)
     return resp
@@ -551,7 +563,11 @@ def join_submit():
     device = get_or_create_device(device_id)
     ok, error = join_account_by_code(device_id, request.form.get("join_code", ""))
     joined_device = get_or_create_device(device_id)
-    resp = make_response(render_template("join.html", device=joined_device, error=error, success="加入成功，这台设备现在归到同一个账号了。" if ok else None))
+    if ok:
+        success_msg = "已提交加入申请，等待组内设备批准后即可查看记录。"
+    else:
+        success_msg = None
+    resp = make_response(render_template("join.html", device=joined_device, error=error, success=success_msg))
     resp.set_cookie("qc_device_id", device_id, max_age=31536000, httponly=True)
     return resp
 
@@ -581,6 +597,8 @@ def me_page():
     if not device_id:
         return redirect(url_for("index"))
     device = get_or_create_device(device_id)
+    if device.get("pending_approval"):
+        return redirect(url_for("index"))
     summary = get_account_summary(device["user_id"])
     devices = get_devices(user_id=device["user_id"], pending_approval=False)
     pending_devices = get_devices(user_id=device["user_id"], pending_approval=True)
