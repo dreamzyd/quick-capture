@@ -721,6 +721,10 @@ def add_item():
             added_count += 1
         conn.commit()
         conn.close()
+    # pending 设备提交后只显示等待批准提示
+    if device and device.get("pending_approval"):
+        return render_template("_capture_result.html", added_count=added_count)
+    # 已批准设备提交后显示低调列表
     if device and device.get("approval_status") == "approved":
         items = get_items(device["user_id"])
         return render_template("_subtle_list.html", items=items[:5])
