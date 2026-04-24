@@ -85,3 +85,9 @@ button.success { background: var(--success); }
   .hint { text-align: center; }
   .clear-search { display: block; text-align: center; margin-top: 8px; }
 }
+.subtle-list { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; margin-bottom: 18px; }
+.subtle-list-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.subtle-list-title { color: var(--muted); font-size: 13px; font-weight: 600; }
+.subtle-list-items { list-style: none; padding: 0; margin: 0; }
+.subtle-list-item { color: var(--text); font-size: 14px; line-height: 1.5; padding: 6px 0; border-bottom: 1px solid var(--border); word-break: break-word; }
+.subtle-list-item:last-child { border-bottom: none; }

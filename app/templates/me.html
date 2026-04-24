@@ -26,8 +26,13 @@
 
     <section class="summary-grid">
       <article class="summary-card">
-        <div class="summary-label">账号名称</div>
-        <div class="summary-value">{{ summary.user.name }}</div>
+        <div class="summary-label">记录组名称</div>
+        <form class="rename-form" action="/me/rename-account" method="post">
+          <div class="inline-form-row">
+            <input name="user_name" value="{{ summary.user.name }}" maxlength="80" required />
+            <button type="submit" class="secondary-button compact">保存名称</button>
+          </div>
+        </form>
         <div class="item-meta">账号 ID：{{ summary.user.id }}</div>
         <div class="item-meta">状态：{{ summary.user.approval_status }}</div>
       </article>
@@ -37,6 +42,51 @@
         <div class="item-meta">新设备用这个码加入现有账号</div>
       </article>
       <article class="summary-card">
+        <div class="summary-label">API Token</div>
+        {% if summary.user.api_token and summary.user.api_token|length > 8 %}
+          <div class="summary-value small">{{ summary.user.api_token }}</div>
+          <div class="item-meta" style="color: var(--success); margin-top: 8px;">接口已开启</div>
+          <div class="item-meta" style="margin-top: 8px;">
+            <strong>你的专属接口地址：</strong><br>
+            <code style="background: var(--panel-2); padding: 4px 8px; border-radius: 6px; display: block; margin-top: 4px; word-break: break-all;">
+              /api/records?token={{ summary.user.api_token }}&since=1d
+            </code>
+          </div>
+          <div class="item-meta" style="margin-top: 8px;">
+            <strong>支持的时间参数：</strong><br>
+            <code style="background: var(--panel-2); padding: 2px 6px; border-radius: 4px;">since=1h</code> 最近 1 小时
+            <code style="background: var(--panel-2); padding: 2px 6px; border-radius: 4px;">since=6h</code> 最近 6 小时
+            <code style="background: var(--panel-2); padding: 2px 6px; border-radius: 4px;">since=1d</code> 最近 1 天
+            <code style="background: var(--panel-2); padding: 2px 6px; border-radius: 4px;">since=7d</code> 最近 7 天
+            <code style="background: var(--panel-2); padding: 2px 6px; border-radius: 4px;">since=30m</code> 最近 30 分钟
+            <code style="background: var(--panel-2); padding: 2px 6px; border-radius: 4px;">since=</code> 留空获取全部
+          </div>
+        {% elif summary.user.api_token %}
+          <div class="summary-value small" style="color: var(--muted);">{{ summary.user.api_token }}******</div>
+          <div class="item-meta" style="color: var(--warning); margin-top: 8px;">接口已关闭（前缀已保留）</div>
+          <div class="item-meta" style="margin-top: 8px;">输入后缀并点击"开启接口"可重新启用</div>
+        {% else %}
+          <div class="summary-value small" style="color: var(--muted);">未设置</div>
+          <div class="item-meta" style="color: var(--muted); margin-top: 8px;">接口已关闭</div>
+        {% endif %}
+        <form class="rename-form" action="/me/update-token" method="post" style="margin-top: 12px;">
+          <div class="inline-form-row">
+            <input name="token_suffix" placeholder="输入自定义后缀（仅数字和英文）" maxlength="20" pattern="[a-zA-Z0-9]*" />
+            <button type="submit" class="secondary-button compact">{% if summary.user.api_token and summary.user.api_token|length > 8 %}更换 Token{% elif summary.user.api_token %}开启接口{% else %}开启接口{% endif %}</button>
+          </div>
+        </form>
+        <div class="item-meta" style="margin-top: 8px; font-size: 12px;">
+          <strong>说明：</strong>前缀固定，后缀可自定义。留空并提交可关闭接口功能（前缀会保留）。<br>
+          <strong style="color: var(--warning);">请妥善保存你的 Token，可随时更换。</strong>
+        </div>
+        {% if token_error %}
+          <div class="item-meta" style="color: var(--danger); margin-top: 8px;">{{ token_error }}</div>
+        {% endif %}
+        {% if token_success %}
+          <div class="item-meta" style="color: var(--success); margin-top: 8px;">{{ token_success }}</div>
+        {% endif %}
+      </article>
+      <article class="summary-card">
         <div class="summary-label">设备数</div>
         <div class="summary-value">{{ summary.device_count }}</div>
         <div class="item-meta">记录数：{{ summary.item_count }}</div>
@@ -44,6 +94,31 @@
     </section>
 
     <section class="list">
+      {% if pending_devices %}
+        <div class="section-block" style="margin-bottom: 18px;">
+          <h2 class="section-title" style="font-size: 16px; margin-bottom: 10px; color: var(--warning);">待批准设备</h2>
+          {% for device in pending_devices %}
+            <article class="item">
+              <div class="item-main grow">
+                <div class="item-content">{{ device.device_name or 'Unknown' }}</div>
+                <div class="item-meta">device_id: {{ device.device_id }}</div>
+                <div class="item-meta">来源：{{ device.provision_source or '-' }}</div>
+                <div class="item-meta">最近活跃：{{ device.last_seen_at or '-' }}</div>
+              </div>
+              <div class="item-actions">
+                <span class="status-badge pending">待批准</span>
+                <form action="/me/approve-device/{{ device.device_id }}" method="post" class="full-width-form">
+                  <button type="submit" class="success compact">批准加入</button>
+                </form>
+                <form action="/me/remove-device/{{ device.device_id }}" method="post" class="full-width-form">
+                  <button type="submit" class="danger compact">拒绝</button>
+                </form>
+              </div>
+            </article>
+          {% endfor %}
+        </div>
+      {% endif %}
+      <h2 class="section-title" style="font-size: 16px; margin-bottom: 10px;">已批准设备</h2>
       {% if devices %}
         {% for device in devices %}
           <article class="item">
@@ -66,13 +141,16 @@
               {% if current_device_id == device.device_id %}
                 <span class="status-badge trusted">当前设备</span>
               {% else %}
-                <span class="status-badge pending">账号内设备</span>
+                <span class="status-badge trusted">已批准</span>
+                <form action="/me/remove-device/{{ device.device_id }}" method="post" class="full-width-form">
+                  <button type="submit" class="danger compact">移除设备</button>
+                </form>
               {% endif %}
             </div>
           </article>
         {% endfor %}
       {% else %}
-        <div class="empty">这个账号下还没有设备。</div>
+        <div class="empty">这个账号下还没有已批准设备。</div>
       {% endif %}
     </section>
   </main>

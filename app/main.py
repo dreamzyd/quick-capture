@@ -74,6 +74,8 @@ def init_db():
     ensure_column(conn, "users", "join_code", "ALTER TABLE users ADD COLUMN join_code TEXT")
     ensure_column(conn, "users", "approved_at", "ALTER TABLE users ADD COLUMN approved_at TEXT")
     ensure_column(conn, "devices", "provision_source", "ALTER TABLE devices ADD COLUMN provision_source TEXT NOT NULL DEFAULT 'direct'")
+    ensure_column(conn, "devices", "pending_approval", "ALTER TABLE devices ADD COLUMN pending_approval INTEGER NOT NULL DEFAULT 0")
+    ensure_column(conn, "users", "api_token", "ALTER TABLE users ADD COLUMN api_token TEXT")
     conn.execute("UPDATE inbox_items SET user_id = 1 WHERE user_id IS NULL")
     conn.execute("UPDATE users SET approved_at = COALESCE(approved_at, created_at) WHERE approval_status = 'approved'")
     conn.commit()
@@ -128,7 +130,7 @@ def ensure_user_join_code(conn, user_id):
 def get_or_create_device(device_id):
     conn = get_conn()
     row = conn.execute(
-        "SELECT d.id, d.user_id, d.device_id, d.device_name, d.trusted, d.provision_source, u.approval_status, u.join_code FROM devices d JOIN users u ON u.id = d.user_id WHERE d.device_id = ?",
+        "SELECT d.id, d.user_id, d.device_id, d.device_name, d.trusted, d.provision_source, u.approval_status, u.join_code, u.name AS user_name FROM devices d JOIN users u ON u.id = d.user_id WHERE d.device_id = ?",
         (device_id,)
     ).fetchone()
     if not row:
@@ -141,7 +143,7 @@ def get_or_create_device(device_id):
         )
         conn.commit()
         row = conn.execute(
-            "SELECT d.id, d.user_id, d.device_id, d.device_name, d.trusted, d.provision_source, u.approval_status, u.join_code FROM devices d JOIN users u ON u.id = d.user_id WHERE d.device_id = ?",
+            "SELECT d.id, d.user_id, d.device_id, d.device_name, d.trusted, d.provision_source, u.approval_status, u.join_code, u.name AS user_name FROM devices d JOIN users u ON u.id = d.user_id WHERE d.device_id = ?",
             (device_id,)
         ).fetchone()
     conn.execute(
@@ -225,7 +227,7 @@ def get_device_items(device_id):
     return (dict(device) if device else None, [dict(r) for r in rows])
 
 
-def get_devices(user_id=None):
+def get_devices(user_id=None, pending_approval=None):
     conn = get_conn()
     query = """
         SELECT
@@ -235,6 +237,7 @@ def get_devices(user_id=None):
             d.device_name,
             d.trusted,
             d.provision_source,
+            d.pending_approval,
             d.created_at,
             d.last_seen_at,
             u.approval_status,
@@ -248,7 +251,10 @@ def get_devices(user_id=None):
     if user_id is not None:
         query += " AND d.user_id = ?"
         params.append(user_id)
-    query += " GROUP BY d.id, d.user_id, d.device_id, d.device_name, d.trusted, d.provision_source, d.created_at, d.last_seen_at, u.approval_status ORDER BY COALESCE(d.last_seen_at, d.created_at) DESC, d.id DESC"
+    if pending_approval is not None:
+        query += " AND d.pending_approval = ?"
+        params.append(1 if pending_approval else 0)
+    query += " GROUP BY d.id, d.user_id, d.device_id, d.device_name, d.trusted, d.provision_source, d.pending_approval, d.created_at, d.last_seen_at, u.approval_status ORDER BY COALESCE(d.last_seen_at, d.created_at) DESC, d.id DESC"
     rows = conn.execute(query, params).fetchall()
     conn.close()
     return [dict(r) for r in rows]
@@ -278,9 +284,10 @@ def get_users(approval_status=None):
 def approve_user(user_id):
     conn = get_conn()
     now = datetime.now().isoformat(timespec="seconds")
+    token = uuid.uuid4().hex[:16]
     conn.execute(
-        "UPDATE users SET approval_status = 'approved', approved_at = COALESCE(approved_at, ?), join_code = COALESCE(join_code, ?) WHERE id = ?",
-        (now, generate_join_code(), user_id),
+        "UPDATE users SET approval_status = 'approved', approved_at = COALESCE(approved_at, ?), join_code = COALESCE(join_code, ?), api_token = COALESCE(api_token, ?) WHERE id = ?",
+        (now, generate_join_code(), token, user_id),
     )
     conn.commit()
     conn.close()
@@ -316,7 +323,7 @@ def join_account_by_code(device_id, join_code):
 
 def get_account_summary(user_id):
     conn = get_conn()
-    user = conn.execute('SELECT id, name, created_at, approval_status, join_code, approved_at FROM users WHERE id = ?', (user_id,)).fetchone()
+    user = conn.execute('SELECT id, name, created_at, approval_status, join_code, approved_at, api_token FROM users WHERE id = ?', (user_id,)).fetchone()
     device_count = conn.execute('SELECT COUNT(*) AS c FROM devices WHERE user_id = ?', (user_id,)).fetchone()["c"]
     item_count = conn.execute('SELECT COUNT(*) AS c FROM inbox_items WHERE user_id = ?', (user_id,)).fetchone()["c"]
     trusted_device_count = conn.execute('SELECT COUNT(*) AS c FROM devices WHERE user_id = ? AND trusted = 1', (user_id,)).fetchone()["c"]
@@ -342,6 +349,118 @@ def update_device_name(device_id, device_name):
     conn.close()
 
 
+def update_user_name(user_id, user_name):
+    clean_name = (user_name or "").strip()[:80]
+    if not clean_name:
+        clean_name = f"user-{user_id}"
+    conn = get_conn()
+    conn.execute("UPDATE users SET name = ? WHERE id = ?", (clean_name, user_id))
+    conn.commit()
+    conn.close()
+
+
+def ensure_user_api_token(user_id):
+    conn = get_conn()
+    row = conn.execute("SELECT api_token FROM users WHERE id = ?", (user_id,)).fetchone()
+    if not row or not row["api_token"]:
+        prefix = uuid.uuid4().hex[:8]
+        token = prefix
+        conn.execute("UPDATE users SET api_token = ? WHERE id = ?", (token, user_id))
+        conn.commit()
+        conn.close()
+        return prefix
+    conn.close()
+    return row["api_token"]
+
+
+def update_user_api_token(user_id, user_suffix, keep_prefix=True):
+    clean_suffix = (user_suffix or "").strip()
+    conn = get_conn()
+    row = conn.execute("SELECT api_token FROM users WHERE id = ?", (user_id,)).fetchone()
+    if not row:
+        conn.close()
+        return False, "用户不存在"
+    if not clean_suffix:
+        if keep_prefix and row["api_token"]:
+            prefix = row["api_token"][:8]
+            conn.execute("UPDATE users SET api_token = ? WHERE id = ?", (prefix, user_id))
+        else:
+            conn.execute("UPDATE users SET api_token = NULL WHERE id = ?", (user_id,))
+        conn.commit()
+        conn.close()
+        return True, None
+    if not clean_suffix.isalnum():
+        conn.close()
+        return False, "后缀只能包含数字和英文"
+    if len(clean_suffix) > 20:
+        conn.close()
+        return False, "后缀不能超过 20 个字符"
+    prefix = row["api_token"][:8] if row["api_token"] else uuid.uuid4().hex[:8]
+    new_token = prefix + clean_suffix
+    existing = conn.execute("SELECT id FROM users WHERE api_token = ? AND id != ?", (new_token, user_id)).fetchone()
+    if existing:
+        conn.close()
+        return False, "该 token 已被其他用户使用，请换一个后缀"
+    conn.execute("UPDATE users SET api_token = ? WHERE id = ?", (new_token, user_id))
+    conn.commit()
+    conn.close()
+    return True, None
+
+
+def get_user_by_token(token):
+    conn = get_conn()
+    user = conn.execute("SELECT id, name FROM users WHERE api_token = ?", (token,)).fetchone()
+    conn.close()
+    return dict(user) if user else None
+
+
+def get_records_by_time(user_id, since=None):
+    conn = get_conn()
+    if since:
+        if since.endswith("h"):
+            hours = int(since[:-1])
+            time_filter = f"datetime('now', '-{hours} hours')"
+        elif since.endswith("d"):
+            days = int(since[:-1])
+            time_filter = f"datetime('now', '-{days} days')"
+        elif since.endswith("m"):
+            minutes = int(since[:-1])
+            time_filter = f"datetime('now', '-{minutes} minutes')"
+        else:
+            time_filter = "datetime('now', '-1 hours')"
+        rows = conn.execute(
+            f"SELECT id, content, status, created_at FROM inbox_items WHERE user_id = ? AND created_at >= {time_filter} ORDER BY created_at DESC",
+            (user_id,)
+        ).fetchall()
+    else:
+        rows = conn.execute(
+            "SELECT id, content, status, created_at FROM inbox_items WHERE user_id = ? ORDER BY created_at DESC",
+            (user_id,)
+        ).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
+def approve_device_from_group(current_device_id, target_device_id):
+    """组内任意设备都可以批准其他设备"""
+    conn = get_conn()
+    current = conn.execute("SELECT user_id, pending_approval FROM devices WHERE device_id = ?", (current_device_id,)).fetchone()
+    if not current or current["pending_approval"]:
+        conn.close()
+        return False, "当前设备还未被批准，无权审批"
+    target = conn.execute("SELECT user_id, pending_approval FROM devices WHERE device_id = ?", (target_device_id,)).fetchone()
+    if not target or not target["pending_approval"]:
+        conn.close()
+        return False, "该设备不需要批准"
+    if current["user_id"] != target["user_id"]:
+        conn.close()
+        return False, "只能批准同组设备"
+    conn.execute("UPDATE devices SET pending_approval = 0 WHERE device_id = ?", (target_device_id,))
+    conn.commit()
+    conn.close()
+    return True, None
+
+
 def toggle_device_trusted(device_id):
     conn = get_conn()
     row = conn.execute("SELECT trusted FROM devices WHERE device_id = ?", (device_id,)).fetchone()
@@ -353,6 +472,21 @@ def toggle_device_trusted(device_id):
         )
         conn.commit()
     conn.close()
+
+
+def remove_device_from_account(current_device_id, target_device_id):
+    if not current_device_id or current_device_id == target_device_id:
+        return False
+    conn = get_conn()
+    current = conn.execute("SELECT user_id FROM devices WHERE device_id = ?", (current_device_id,)).fetchone()
+    target = conn.execute("SELECT user_id FROM devices WHERE device_id = ?", (target_device_id,)).fetchone()
+    if not current or not target or current["user_id"] != target["user_id"]:
+        conn.close()
+        return False
+    conn.execute("DELETE FROM devices WHERE device_id = ?", (target_device_id,))
+    conn.commit()
+    conn.close()
+    return True
 
 
 def build_export_filename(ext):
@@ -448,8 +582,32 @@ def me_page():
         return redirect(url_for("index"))
     device = get_or_create_device(device_id)
     summary = get_account_summary(device["user_id"])
+    devices = get_devices(user_id=device["user_id"], pending_approval=False)
+    pending_devices = get_devices(user_id=device["user_id"], pending_approval=True)
+    return render_template("me.html", summary=summary, devices=devices, pending_devices=pending_devices, current_device_id=device_id, is_admin=is_admin_authenticated())
+
+
+@app.route("/me/rename-account", methods=["POST"])
+def rename_account():
+    device_id = request.cookies.get("qc_device_id")
+    if not device_id:
+        return redirect(url_for("index"))
+    device = get_or_create_device(device_id)
+    update_user_name(device["user_id"], request.form.get("user_name", ""))
+    return redirect(url_for("me_page"))
+
+
+@app.route("/me/update-token", methods=["POST"])
+def update_token():
+    device_id = request.cookies.get("qc_device_id")
+    if not device_id:
+        return redirect(url_for("index"))
+    device = get_or_create_device(device_id)
+    user_suffix = request.form.get("token_suffix", "")
+    ok, error = update_user_api_token(device["user_id"], user_suffix)
+    summary = get_account_summary(device["user_id"])
     devices = get_devices(user_id=device["user_id"])
-    return render_template("me.html", summary=summary, devices=devices, current_device_id=device_id, is_admin=is_admin_authenticated())
+    return render_template("me.html", summary=summary, devices=devices, current_device_id=device_id, is_admin=is_admin_authenticated(), token_error=error if not ok else None, token_success="API Token 已更新" if ok else None)
 
 
 @app.route("/account")
@@ -511,6 +669,22 @@ def toggle_device(device_id):
     return redirect(url_for("devices_page"))
 
 
+@app.route("/me/remove-device/<device_id>", methods=["POST"])
+def remove_device(device_id):
+    current_device_id = request.cookies.get("qc_device_id")
+    remove_device_from_account(current_device_id, device_id)
+    return redirect(url_for("me_page"))
+
+
+@app.route("/me/approve-device/<device_id>", methods=["POST"])
+def approve_device(device_id):
+    current_device_id = request.cookies.get("qc_device_id")
+    ok, error = approve_device_from_group(current_device_id, device_id)
+    if not ok:
+        return redirect(url_for("me_page"))
+    return redirect(url_for("me_page"))
+
+
 @app.route("/add", methods=["POST"])
 def add_item():
     raw = request.form.get("content", "")
@@ -530,8 +704,20 @@ def add_item():
         conn.commit()
         conn.close()
     if device and device.get("approval_status") == "approved":
-        return render_template("_list.html", items=get_items(device["user_id"]))
+        items = get_items(device["user_id"])
+        return render_template("_subtle_list.html", items=items[:5])
     return render_template("_capture_result.html", added_count=added_count)
+
+
+@app.route("/api/records")
+def api_records():
+    token = request.args.get("token", "")
+    since = request.args.get("since", "")
+    user = get_user_by_token(token)
+    if not user:
+        return Response(json.dumps({"error": "无效 token"}), status=401, mimetype="application/json")
+    records = get_records_by_time(user["id"], since if since else None)
+    return Response(json.dumps({"user": user["name"], "count": len(records), "records": records}, ensure_ascii=False), mimetype="application/json")
 
 
 @app.route("/export.csv")

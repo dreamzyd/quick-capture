@@ -13,20 +13,14 @@
       <h1>记一下</h1>
       <p class="subtitle">先记下来，别打断自己。</p>
       {% if device %}
-        <form class="rename-form" action="/devices/rename/{{ device.device_id }}" method="post">
-          <label class="field-label" for="current-device-name">当前设备名称</label>
-          <div class="inline-form-row">
-            <input id="current-device-name" name="device_name" value="{{ device.device_name or 'Unknown' }}" maxlength="80" required />
-            <button type="submit" class="secondary-button compact">保存名称</button>
-          </div>
-        </form>
+        <p class="device-info">当前记录组：{{ device.user_name or '未命名记录组' }}</p>
       {% endif %}
     </header>
 
     <section class="capture-box capture-box-focus">
       <form
         hx-post="/add"
-        hx-target="#home-items"
+        hx-target="#capture-result"
         hx-swap="innerHTML"
         hx-on::after-request="if(event.detail.successful){ this.reset(); this.querySelector('textarea').focus(); }"
       >
@@ -38,19 +32,27 @@
       </form>
     </section>
 
-    <section class="quick-links">
-      <a class="subtle-link" href="/me">我的账号</a>
-      {% if not device or device.approval_status != 'approved' %}
-        <a class="subtle-link" href="/join">加入已有账号</a>
+    <section id="capture-result">
+      {% if device and device.approval_status == 'approved' and items %}
+        <div class="subtle-list">
+          <div class="subtle-list-header">
+            <span class="subtle-list-title">最近记录</span>
+            <a class="subtle-link" href="/me">查看全部 →</a>
+          </div>
+          <ul class="subtle-list-items">
+            {% for item in items[:5] %}
+              <li class="subtle-list-item">{{ item.content }}</li>
+            {% endfor %}
+          </ul>
+        </div>
+      {% else %}
+        <div class="capture-feedback">写进去了。查看记录请访问 /me 或使用 API 接口。</div>
       {% endif %}
     </section>
 
-    <section id="home-items">
-      {% if device and device.approval_status == 'approved' %}
-        {% include '_list.html' %}
-      {% else %}
-        <div class="capture-feedback">写进去了。当前账号还没开通前，这里先不展示历史记录。</div>
-      {% endif %}
+    <section class="quick-links">
+      <a class="subtle-link" href="/me">我的账号</a>
+      <a class="subtle-link" href="/join">加入已有账号</a>
     </section>
   </main>
 
