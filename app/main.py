@@ -292,6 +292,8 @@ def approve_user(user_id):
         "UPDATE users SET approval_status = 'approved', approved_at = COALESCE(approved_at, ?), join_code = COALESCE(join_code, ?), api_token = COALESCE(api_token, ?) WHERE id = ?",
         (now, generate_join_code(), token, user_id),
     )
+    # 自动批准该账号的所有设备
+    conn.execute("UPDATE devices SET pending_approval = 0 WHERE user_id = ?", (user_id,))
     conn.commit()
     conn.close()
 
