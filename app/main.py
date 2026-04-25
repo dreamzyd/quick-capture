@@ -529,14 +529,16 @@ def index():
     device = get_or_create_device(device_id)
     # 新用户（未加入任何组）显示着陆页
     if not device.get("user_id"):
-        resp = make_response(render_template("index_landing.html"))
+        resp = make_response(render_template("index_landing.html", device=device))
         resp.set_cookie("qc_device_id", device_id, max_age=31536000, httponly=True)
         return resp
-    # 已批准设备显示采集界面
-    items = []
-    if device.get("approval_status") == "approved" and not device.get("pending_approval"):
-        items = get_items(device["user_id"])
-    resp = make_response(render_template("index.html", device=device, items=items))
+    # 已申请但仍在等待批准的设备，不应看到采集界面
+    if device.get("pending_approval") or device.get("approval_status") != "approved":
+        resp = make_response(render_template("index_pending.html", device=device))
+        resp.set_cookie("qc_device_id", device_id, max_age=31536000, httponly=True)
+        return resp
+    items = get_items(device["user_id"])
+    resp = make_response(render_template("index.html", device=device, items=items, is_admin=is_admin_authenticated()))
     resp.set_cookie("qc_device_id", device_id, max_age=31536000, httponly=True)
     return resp
 
