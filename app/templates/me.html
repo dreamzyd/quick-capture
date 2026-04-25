@@ -43,6 +43,13 @@
         <div class="summary-label">加入码</div>
         <div class="summary-value small">{{ summary.user.join_code or '-' }}</div>
         <div class="item-meta">新设备用这个码加入现有账号</div>
+        {% if is_admin %}
+          <div class="account-danger-row">
+            <form action="/admin/accounts/delete/{{ summary.user.id }}" method="post" class="full-width-form" onsubmit="return confirm('确认删除这个组及其所有设备和记录？');">
+              <button type="submit" class="danger compact">删除这个组</button>
+            </form>
+          </div>
+        {% endif %}
       </article>
       <article class="summary-card">
         <div class="summary-label">API Token</div>

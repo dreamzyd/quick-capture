@@ -78,6 +78,9 @@ def init_db():
     ensure_column(conn, "users", "api_token", "ALTER TABLE users ADD COLUMN api_token TEXT")
     conn.execute("UPDATE inbox_items SET user_id = 1 WHERE user_id IS NULL")
     conn.execute("UPDATE users SET approved_at = COALESCE(approved_at, created_at) WHERE approval_status = 'approved'")
+    # 清理历史重复 device_id，只保留每个 device_id 最后一条记录
+    conn.execute("DELETE FROM devices WHERE id NOT IN (SELECT MAX(id) FROM devices GROUP BY device_id)")
+    conn.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_devices_device_id_unique ON devices(device_id)")
     conn.commit()
     conn.close()
 
@@ -135,18 +138,17 @@ def ensure_user_join_code(conn, user_id):
 def get_or_create_device(device_id):
     conn = get_conn()
     row = conn.execute(
-        "SELECT d.id, d.user_id, d.device_id, d.device_name, d.trusted, d.provision_source, d.pending_approval, u.approval_status, u.join_code, u.name AS user_name FROM devices d JOIN users u ON u.id = d.user_id WHERE d.device_id = ?",
+        "SELECT d.id, d.user_id, d.device_id, d.device_name, d.trusted, d.provision_source, d.pending_approval, u.approval_status, u.join_code, u.name AS user_name FROM devices d LEFT JOIN users u ON u.id = d.user_id WHERE d.device_id = ? ORDER BY d.id DESC LIMIT 1",
         (device_id,)
     ).fetchone()
     if not row:
-        # 新设备不自动分配 user_id，显示着陆页让用户选择
         conn.execute(
             "INSERT INTO devices (device_id, device_name, trusted, provision_source, user_id) VALUES (?, 'Unknown', 0, 'first-visit', NULL)",
             (device_id,)
         )
         conn.commit()
         row = conn.execute(
-            "SELECT d.id, d.user_id, d.device_id, d.device_name, d.trusted, d.provision_source, d.pending_approval, u.approval_status, u.join_code, u.name AS user_name FROM devices d LEFT JOIN users u ON u.id = d.user_id WHERE d.device_id = ?",
+            "SELECT d.id, d.user_id, d.device_id, d.device_name, d.trusted, d.provision_source, d.pending_approval, u.approval_status, u.join_code, u.name AS user_name FROM devices d LEFT JOIN users u ON u.id = d.user_id WHERE d.device_id = ? ORDER BY d.id DESC LIMIT 1",
             (device_id,)
         ).fetchone()
     conn.execute(
@@ -154,8 +156,12 @@ def get_or_create_device(device_id):
         (datetime.now().isoformat(timespec="seconds"), device_id),
     )
     conn.commit()
+    refreshed = conn.execute(
+        "SELECT d.id, d.user_id, d.device_id, d.device_name, d.trusted, d.provision_source, d.pending_approval, u.approval_status, u.join_code, u.name AS user_name FROM devices d LEFT JOIN users u ON u.id = d.user_id WHERE d.device_id = ? ORDER BY d.id DESC LIMIT 1",
+        (device_id,)
+    ).fetchone()
     conn.close()
-    return dict(row)
+    return dict(refreshed)
 
 
 def get_items(user_id=None, q=None):
@@ -297,6 +303,15 @@ def approve_user(user_id):
         "UPDATE devices SET pending_approval = 0, trusted = 1 WHERE user_id = ? AND provision_source = 'create-group'",
         (user_id,),
     )
+    conn.commit()
+    conn.close()
+
+
+def delete_user_account(user_id):
+    conn = get_conn()
+    conn.execute("DELETE FROM inbox_items WHERE user_id = ?", (user_id,))
+    conn.execute("DELETE FROM devices WHERE user_id = ?", (user_id,))
+    conn.execute("DELETE FROM users WHERE id = ?", (user_id,))
     conn.commit()
     conn.close()
 
@@ -655,6 +670,15 @@ def approve_user_route(user_id):
     if guard:
         return guard
     approve_user(user_id)
+    return redirect(url_for("admin_accounts_page"))
+
+
+@app.route("/admin/accounts/delete/<int:user_id>", methods=["POST"])
+def delete_user_route(user_id):
+    guard = admin_guard()
+    if guard:
+        return guard
+    delete_user_account(user_id)
     return redirect(url_for("admin_accounts_page"))
 
 

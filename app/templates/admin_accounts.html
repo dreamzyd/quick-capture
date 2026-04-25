@@ -67,6 +67,9 @@
               <div class="item-actions">
                 <span class="status-badge trusted">已开通</span>
                 <a class="secondary-button compact" href="/account?user_id={{ user.id }}">看这个账号</a>
+                <form action="/admin/accounts/delete/{{ user.id }}" method="post" class="full-width-form" onsubmit="return confirm('确认删除这个组及其所有设备和记录？');">
+                  <button type="submit" class="danger compact">删除组</button>
+                </form>
               </div>
             </article>
           {% endfor %}
