@@ -33,6 +33,9 @@ environment:
 
 ### 3. 启动
 
+`docker-compose.yml` 已内置 `TZ=Asia/Shanghai`，容器时区默认为东八区。
+
+
 ```bash
 docker compose up -d --build quick-capture
 ```
@@ -43,6 +46,9 @@ docker compose up -d --build quick-capture
 - 局域网 / 外网：`http://<你的IP>:18901`
 
 ## 使用说明
+
+页面、接口和新写入数据的时间统一按东八区（Asia/Shanghai / UTC+8）处理。
+
 
 ### 新建记录组
 

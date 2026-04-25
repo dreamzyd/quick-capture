@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 import csv
 import hashlib
@@ -20,22 +20,32 @@ ADMIN_COOKIE = "qc_admin"
 app = Flask(__name__, template_folder=str(BASE_DIR / "app" / "templates"), static_folder=str(BASE_DIR / "app" / "static"))
 
 
+CN_TZ = timezone(timedelta(hours=8))
 CN_OFFSET = "+08:00"
 
 
 def now_local_iso():
-    return datetime.now().replace(microsecond=0).isoformat() + CN_OFFSET
+    return datetime.now(CN_TZ).replace(microsecond=0).isoformat()
 
 
 def format_cn_time(value):
     if not value:
         return "-"
     raw = str(value).strip()
-    if raw.endswith(CN_OFFSET):
-        raw = raw[:-6]
-    if raw.endswith("Z"):
-        raw = raw[:-1]
-    return raw.replace("T", " ")
+    try:
+        if raw.endswith("Z"):
+            dt = datetime.fromisoformat(raw.replace("Z", "+00:00"))
+        else:
+            dt = datetime.fromisoformat(raw)
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=CN_TZ)
+        else:
+            dt = dt.astimezone(CN_TZ)
+        return dt.strftime("%Y-%m-%d %H:%M:%S")
+    except Exception:
+        if raw.endswith(CN_OFFSET):
+            raw = raw[:-6]
+        return raw.replace("T", " ")
 
 
 def get_conn():
@@ -486,8 +496,17 @@ def get_records_by_time(user_id, since=None):
             delta = f"-{int(since[:-1])} minutes"
         else:
             delta = "-1 hours"
-        base_query += " AND i.created_at >= datetime('now', ?)"
-        params.append(delta)
+        now_cutoff = datetime.now(CN_TZ)
+        if since.endswith("h"):
+            now_cutoff = now_cutoff - timedelta(hours=int(since[:-1]))
+        elif since.endswith("d"):
+            now_cutoff = now_cutoff - timedelta(days=int(since[:-1]))
+        elif since.endswith("m"):
+            now_cutoff = now_cutoff - timedelta(minutes=int(since[:-1]))
+        else:
+            now_cutoff = now_cutoff - timedelta(hours=1)
+        base_query += " AND i.created_at >= ?"
+        params.append(now_cutoff.replace(microsecond=0).isoformat())
     base_query += " ORDER BY i.created_at DESC, i.id DESC"
     rows = conn.execute(base_query, params).fetchall()
     conn.close()

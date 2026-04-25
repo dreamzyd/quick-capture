@@ -10,4 +10,5 @@ services:
     environment:
       - QUICK_CAPTURE_DB=/app/data/quick_capture.db
       - QUICK_CAPTURE_ADMIN_PASSWORD=QC-admin-20260424
+      - TZ=Asia/Shanghai
     restart: unless-stopped
