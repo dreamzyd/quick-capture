@@ -21,7 +21,7 @@ app = Flask(__name__, template_folder=str(BASE_DIR / "app" / "templates"), stati
 
 
 def get_conn():
-    conn = sqlite3.connect(str(DB_PATH))
+    conn = sqlite3.connect(str(DB_PATH), timeout=8)
     conn.row_factory = sqlite3.Row
     return conn
 
@@ -34,6 +34,7 @@ def ensure_column(conn, table_name, column_name, alter_sql):
 
 def init_db():
     conn = get_conn()
+    conn.execute("PRAGMA journal_mode=WAL")
     conn.execute(
         """
         CREATE TABLE IF NOT EXISTS inbox_items (

@@ -18,6 +18,7 @@
           <a class="nav-link" href="/">首页</a>
           <a class="nav-link" href="/me">我的账号</a>
           {% if is_admin %}
+            <span class="admin-badge">管理员模式</span>
             <a class="nav-link" href="/admin/accounts">管理员后台</a>
             <form action="/admin/logout" method="post" class="inline-form-row">
               <button type="submit" class="danger compact">退出管理员</button>
@@ -45,7 +46,7 @@
         <div class="item-meta">新设备用这个码加入现有账号</div>
         {% if is_admin %}
           <div class="account-danger-row">
-            <form action="/admin/accounts/delete/{{ summary.user.id }}" method="post" class="full-width-form" onsubmit="return confirm('确认删除这个组及其所有设备和记录？');">
+            <form action="/admin/accounts/delete/{{ summary.user.id }}" method="post" class="full-width-form" onsubmit="return confirmDeleteGroup('{{ summary.user.name }}');">
               <button type="submit" class="danger compact">删除这个组</button>
             </form>
           </div>
@@ -159,5 +160,6 @@
       {% endif %}
     </section>
   </main>
+  <script src="/static/admin-guard.js"></script>
 </body>
 </html>

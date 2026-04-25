@@ -15,6 +15,7 @@
           <p class="subtitle">总管理员现在审批的是“账号首次开通”，不是每一台设备。</p>
         </div>
         <div class="toolbar-actions">
+          <span class="admin-badge">管理员模式</span>
           <a class="nav-link" href="/devices">设备页</a>
           <a class="nav-link" href="/account">账号页</a>
           <form action="/admin/logout" method="post" class="inline-form-row">
@@ -67,8 +68,8 @@
               <div class="item-actions">
                 <span class="status-badge trusted">已开通</span>
                 <a class="secondary-button compact" href="/account?user_id={{ user.id }}">看这个账号</a>
-                <form action="/admin/accounts/delete/{{ user.id }}" method="post" class="full-width-form" onsubmit="return confirm('确认删除这个组及其所有设备和记录？');">
-                  <button type="submit" class="danger compact">删除组</button>
+                <form action="/admin/accounts/delete/{{ user.id }}" method="post" class="full-width-form" onsubmit="return confirmDeleteGroup('{{ user.name }}');">
+                  <button type="submit" class="danger compact">删除组（清空全部数据）</button>
                 </form>
               </div>
             </article>
@@ -79,5 +80,6 @@
       </div>
     </section>
   </main>
+  <script src="/static/admin-guard.js"></script>
 </body>
 </html>

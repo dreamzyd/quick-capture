@@ -1,0 +1,5 @@
+__pycache__/
+*.pyc
+data/backups/*.db
+quick_capture.db
+data/quick_capture.db

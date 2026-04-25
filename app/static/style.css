@@ -113,3 +113,5 @@ button[disabled], .secondary-button[aria-disabled="true"], .nav-link[aria-disabl
 
 .account-danger-row { margin-top: 10px; display: flex; justify-content: flex-end; }
 .account-danger-row .full-width-form { width: auto; }
+
+.admin-badge { display: inline-flex; align-items: center; justify-content: center; padding: 8px 12px; border-radius: 999px; background: rgba(79, 140, 255, 0.16); color: var(--accent); font-size: 13px; font-weight: 700; }
