@@ -447,27 +447,27 @@ def get_user_by_token(token):
 
 def get_records_by_time(user_id, since=None):
     conn = get_conn()
+    base_query = """
+        SELECT i.id, i.content, i.created_at, i.source_device_id,
+               d.device_name AS source_device_name
+        FROM inbox_items i
+        LEFT JOIN devices d ON d.device_id = i.source_device_id
+        WHERE i.user_id = ?
+    """
+    params = [user_id]
     if since:
         if since.endswith("h"):
-            hours = int(since[:-1])
-            time_filter = f"datetime('now', '-{hours} hours')"
+            delta = f"-{int(since[:-1])} hours"
         elif since.endswith("d"):
-            days = int(since[:-1])
-            time_filter = f"datetime('now', '-{days} days')"
+            delta = f"-{int(since[:-1])} days"
         elif since.endswith("m"):
-            minutes = int(since[:-1])
-            time_filter = f"datetime('now', '-{minutes} minutes')"
+            delta = f"-{int(since[:-1])} minutes"
         else:
-            time_filter = "datetime('now', '-1 hours')"
-        rows = conn.execute(
-            f"SELECT id, content, status, created_at FROM inbox_items WHERE user_id = ? AND created_at >= {time_filter} ORDER BY created_at DESC",
-            (user_id,)
-        ).fetchall()
-    else:
-        rows = conn.execute(
-            "SELECT id, content, status, created_at FROM inbox_items WHERE user_id = ? ORDER BY created_at DESC",
-            (user_id,)
-        ).fetchall()
+            delta = "-1 hours"
+        base_query += " AND i.created_at >= datetime('now', ?)"
+        params.append(delta)
+    base_query += " ORDER BY i.created_at DESC, i.id DESC"
+    rows = conn.execute(base_query, params).fetchall()
     conn.close()
     return [dict(r) for r in rows]
 

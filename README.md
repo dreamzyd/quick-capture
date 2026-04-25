@@ -148,3 +148,16 @@ python app/main.py
 ## License
 
 MIT
+
+
+## API 返回说明
+
+`/api/records` 当前返回的每条记录包含：
+
+- `id`
+- `content`
+- `created_at`
+- `source_device_id`
+- `source_device_name`
+
+说明：当前产品不再维护“是否完成/已处理”流程，因此 API 不再强调 `status` 字段。
