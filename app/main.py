@@ -137,23 +137,14 @@ def ensure_user_join_code(conn, user_id):
 
 def get_or_create_device(device_id):
     conn = get_conn()
-    row = conn.execute(
-        "SELECT d.id, d.user_id, d.device_id, d.device_name, d.trusted, d.provision_source, d.pending_approval, u.approval_status, u.join_code, u.name AS user_name FROM devices d LEFT JOIN users u ON u.id = d.user_id WHERE d.device_id = ? ORDER BY d.id DESC LIMIT 1",
-        (device_id,)
-    ).fetchone()
-    if not row:
-        conn.execute(
-            "INSERT INTO devices (device_id, device_name, trusted, provision_source, user_id) VALUES (?, 'Unknown', 0, 'first-visit', NULL)",
-            (device_id,)
-        )
-        conn.commit()
-        row = conn.execute(
-            "SELECT d.id, d.user_id, d.device_id, d.device_name, d.trusted, d.provision_source, d.pending_approval, u.approval_status, u.join_code, u.name AS user_name FROM devices d LEFT JOIN users u ON u.id = d.user_id WHERE d.device_id = ? ORDER BY d.id DESC LIMIT 1",
-            (device_id,)
-        ).fetchone()
+    now = datetime.now().isoformat(timespec="seconds")
+    conn.execute(
+        "INSERT OR IGNORE INTO devices (device_id, device_name, trusted, provision_source, user_id, last_seen_at) VALUES (?, 'Unknown', 0, 'first-visit', NULL, ?)",
+        (device_id, now)
+    )
     conn.execute(
         "UPDATE devices SET last_seen_at = ? WHERE device_id = ?",
-        (datetime.now().isoformat(timespec="seconds"), device_id),
+        (now, device_id),
     )
     conn.commit()
     refreshed = conn.execute(
