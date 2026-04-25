@@ -106,3 +106,6 @@ button.success { background: var(--success); }
   .landing-actions { flex-direction: column; align-items: stretch; }
   .landing-button { width: 100%; }
 }
+
+.form-tip { margin: 10px 0 0; color: var(--muted); font-size: 13px; line-height: 1.6; }
+button[disabled], .secondary-button[aria-disabled="true"], .nav-link[aria-disabled="true"] { opacity: 0.65; cursor: not-allowed; pointer-events: none; }

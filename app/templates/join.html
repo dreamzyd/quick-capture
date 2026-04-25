@@ -9,11 +9,19 @@
 <body>
   <main class="container compact-page">
     <header class="header capture-header">
-      <h1>加入已有组</h1>
-      <p class="subtitle">把这台设备加入你已经开通的组，这样手机、电脑、Pad 就能共享同一份记录。</p>
-      {% if device %}
-        <p class="device-info">当前设备：{{ device.device_name or '新设备' }}</p>
-      {% endif %}
+      <div class="title-row">
+        <div>
+          <h1>加入已有组</h1>
+          <p class="subtitle">把这台设备加入你已经开通的组，这样手机、电脑、Pad 就能共享同一份记录。</p>
+          {% if device %}
+            <p class="device-info">当前设备：{{ device.device_name or '新设备' }}</p>
+          {% endif %}
+        </div>
+        <div class="toolbar-actions">
+          <a class="nav-link" href="/">首页</a>
+          <a class="nav-link" href="/create-group">新建组</a>
+        </div>
+      </div>
     </header>
 
     <section class="capture-box capture-box-focus">
@@ -23,18 +31,15 @@
       {% if success %}
         <div class="capture-feedback">{{ success }}</div>
       {% endif %}
-      <form action="/join" method="post">
+      <form action="/join" method="post" class="submit-once-form">
         <input type="text" name="join_code" placeholder="输入组加入码" required autofocus />
+        <p class="form-tip">提交后会进入等待审批状态，同一台设备重复刷新不会重复申请。</p>
         <div class="action-row action-row-focus">
-          <button type="submit" class="primary primary-big">加入组</button>
+          <button type="submit" class="primary primary-big" data-loading-text="正在提交...">加入组</button>
         </div>
       </form>
     </section>
-
-    <section class="quick-links" style="justify-content: center;">
-      <a class="subtle-link" href="/">返回首页</a>
-      <a class="subtle-link" href="/create-group">新建组</a>
-    </section>
   </main>
+  <script src="/static/form-guard.js"></script>
 </body>
 </html>

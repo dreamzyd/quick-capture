@@ -8,21 +8,37 @@
 </head>
 <body>
   <main class="container compact-page">
-    <header class="header capture-header center-header">
-      <h1>等待批准</h1>
-      <p class="subtitle">这台设备已经发起申请，在批准完成前不能进入记录组。</p>
-      {% if device and device.user_name %}
-        <p class="device-info">目标记录组：{{ device.user_name }}</p>
-      {% endif %}
+    <header class="header capture-header">
+      <div class="title-row">
+        <div>
+          <h1>等待批准</h1>
+          <p class="subtitle">这台设备已经发起申请，在批准完成前不能进入记录组。</p>
+          {% if device and device.user_name %}
+            <p class="device-info">目标记录组：{{ device.user_name }}</p>
+          {% endif %}
+        </div>
+        <div class="toolbar-actions">
+          <a class="nav-link" href="/">刷新状态</a>
+          {% if device and not device.user_id %}
+            <a class="nav-link" href="/create-group">新建组</a>
+          {% endif %}
+        </div>
+      </div>
     </header>
 
     <section class="capture-box capture-box-focus pending-panel">
       <div class="status-badge pending pending-hero">审批中</div>
-      <p class="pending-copy">请等待管理员或组内已批准设备完成审批。批准完成后，刷新页面即可进入。</p>
+      {% if device and device.provision_source == 'create-group' %}
+        <p class="pending-copy">你已经创建了记录组，正在等待管理员批准。批准完成后，返回首页或刷新本页即可进入。</p>
+      {% elif device and device.provision_source == 'join-code' %}
+        <p class="pending-copy">你已经申请加入该记录组，正在等待组内已批准设备确认。批准完成后，返回首页或刷新本页即可进入。</p>
+      {% else %}
+        <p class="pending-copy">请等待管理员或组内已批准设备完成审批。批准完成后，刷新页面即可进入。</p>
+      {% endif %}
     </section>
 
     <section class="quick-links quick-links-center">
-      <a class="subtle-link" href="/">刷新状态</a>
+      <a class="subtle-link" href="/">返回首页</a>
     </section>
   </main>
 </body>
