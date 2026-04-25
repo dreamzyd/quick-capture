@@ -10,4 +10,11 @@
     {% endfor %}
   </ul>
 </div>
+{% else %}
+<div class="subtle-list">
+  <div class="subtle-list-header">
+    <span class="subtle-list-title">最近记录</span>
+  </div>
+  <div class="empty subtle-empty">还没有记录，先写第一条吧。</div>
+</div>
 {% endif %}

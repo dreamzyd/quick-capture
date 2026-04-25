@@ -26,14 +26,14 @@
 
     <section class="capture-box capture-box-focus">
       {% if error %}
-        <p class="error-text">{{ error }}</p>
+        <div class="feedback-panel feedback-error">{{ error }}</div>
       {% endif %}
       {% if success %}
-        <div class="capture-feedback">{{ success }}</div>
+        <div class="feedback-panel feedback-success">{{ success }}</div>
       {% endif %}
       <form action="/join" method="post" class="submit-once-form">
         <input type="text" name="join_code" placeholder="输入组加入码" required autofocus />
-        <p class="form-tip">提交后会进入等待审批状态，同一台设备重复刷新不会重复申请。</p>
+        <p class="form-tip">提交后会进入等待审批状态。同一台设备重复刷新不会重复申请，加入码输错时也会在这里直接提示。</p>
         <div class="action-row action-row-focus">
           <button type="submit" class="primary primary-big" data-loading-text="正在提交...">加入组</button>
         </div>

@@ -1,14 +1,13 @@
 <div class="list">
   {% if items %}
     {% for item in items %}
-      <article class="item {% if item.status == 'done' %}done{% endif %}">
+      <article class="item">
         <div class="item-main">
           <div class="item-content">{{ item.content }}</div>
-          <div class="item-meta">{{ item.created_at[5:16].replace('T', ' ') if item.created_at else '' }} · {{ '已完成' if item.status == 'done' else '待处理' }}</div>
+          <div class="item-meta">{{ item.created_at[5:16].replace('T', ' ') if item.created_at else '' }}</div>
         </div>
         <div class="item-actions">
-          <button hx-post="/done/{{ item.id }}" hx-target="#inbox-list" hx-swap="innerHTML">{{ '恢复' if item.status == 'done' else '完成' }}</button>
-          <button class="danger" hx-post="/delete/{{ item.id }}" hx-target="#inbox-list" hx-swap="innerHTML">删除</button>
+                    <button class="danger" hx-post="/delete/{{ item.id }}" hx-target="#inbox-list" hx-swap="innerHTML">删除</button>
         </div>
       </article>
     {% endfor %}

@@ -59,7 +59,6 @@ button.success { background: var(--success); }
 .summary-value.small { font-size: 20px; }
 .item { display: flex; justify-content: space-between; gap: 12px; padding: 14px; }
 .item-main.grow { flex: 1; }
-.item.done .item-content { text-decoration: line-through; color: var(--muted); }
 .item-content { font-size: 16px; line-height: 1.5; word-break: break-word; }
 .item-meta { margin-top: 6px; color: var(--muted); font-size: 12px; word-break: break-all; }
 .item-actions { display: flex; flex-direction: column; gap: 8px; min-width: 160px; align-items: flex-end; }
@@ -115,3 +114,9 @@ button[disabled], .secondary-button[aria-disabled="true"], .nav-link[aria-disabl
 .account-danger-row .full-width-form { width: auto; }
 
 .admin-badge { display: inline-flex; align-items: center; justify-content: center; padding: 8px 12px; border-radius: 999px; background: rgba(79, 140, 255, 0.16); color: var(--accent); font-size: 13px; font-weight: 700; }
+
+.feedback-panel { border-radius: 12px; padding: 12px 14px; margin-bottom: 14px; border: 1px solid var(--border); line-height: 1.6; }
+.feedback-error { background: rgba(226, 91, 91, 0.12); border-color: rgba(226, 91, 91, 0.28); color: #ffb4b4; }
+.feedback-success { background: rgba(91, 216, 142, 0.12); border-color: rgba(91, 216, 142, 0.28); color: #b6f3cc; }
+.compact-feedback { margin-top: 10px; margin-bottom: 0; }
+.subtle-empty { padding: 18px 14px; margin-top: 12px; }

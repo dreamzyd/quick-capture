@@ -15,7 +15,7 @@
           <p class="subtitle">这是账号层视图。账号一旦开通，后续设备应该通过加入码并入同一个设备群。</p>
         </div>
         <div class="toolbar-actions">
-          <a class="nav-link" href="/">返回首页</a>
+          <a class="nav-link" href="/">首页</a>
           <a class="nav-link" href="/devices">设备页</a>
           <form action="/admin/logout" method="post" class="inline-form-row">
             <button type="submit" class="danger compact">退出管理员</button>
@@ -60,7 +60,7 @@
           </article>
         {% endfor %}
       {% else %}
-        <div class="empty">这个账号下还没有设备。</div>
+        <div class="empty">这个记录组下还没有设备。先用当前设备记一条，或者让新设备用加入码加入。</div>
       {% endif %}
     </section>
   </main>

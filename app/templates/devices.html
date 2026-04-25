@@ -15,7 +15,7 @@
           <p class="subtitle">现在把设备拆成“已认领”和“待认领”，陌生访问不会直接混进正式设备池。</p>
         </div>
         <div class="toolbar-actions">
-          <a class="nav-link" href="/">返回首页</a>
+          <a class="nav-link" href="/">首页</a>
           <form action="/admin/logout" method="post" class="inline-form-row">
             <button type="submit" class="danger compact">退出管理员</button>
           </form>
@@ -89,7 +89,7 @@
             </article>
           {% endfor %}
         {% else %}
-          <div class="empty">还没有已认领设备。</div>
+          <div class="empty">还没有已认领设备。新设备首次访问后会先出现在待认领区。</div>
         {% endif %}
       </div>
     </section>

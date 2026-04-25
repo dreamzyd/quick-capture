@@ -39,6 +39,7 @@
         </form>
         <div class="item-meta">账号 ID：{{ summary.user.id }}</div>
         <div class="item-meta">状态：{{ summary.user.approval_status }}</div>
+        <div class="item-meta">这里管理你的记录组名称、加入码和设备。</div>
       </article>
       <article class="summary-card">
         <div class="summary-label">加入码</div>
@@ -91,10 +92,10 @@
           <strong style="color: var(--warning);">请妥善保存你的 Token，可随时更换。</strong>
         </div>
         {% if token_error %}
-          <div class="item-meta" style="color: var(--danger); margin-top: 8px;">{{ token_error }}</div>
+          <div class="feedback-panel feedback-error compact-feedback">{{ token_error }}</div>
         {% endif %}
         {% if token_success %}
-          <div class="item-meta" style="color: var(--success); margin-top: 8px;">{{ token_success }}</div>
+          <div class="feedback-panel feedback-success compact-feedback">{{ token_success }}</div>
         {% endif %}
       </article>
     </section>
@@ -156,7 +157,7 @@
           </article>
         {% endfor %}
       {% else %}
-        <div class="empty">这个账号下还没有已批准设备。</div>
+        <div class="empty">这个记录组下还没有其他已批准设备。你可以先用当前设备继续记录，或让新设备通过加入码加入。</div>
       {% endif %}
     </section>
   </main>

@@ -19,7 +19,7 @@
           {% endif %}
         </div>
         <div class="toolbar-actions">
-          <a class="nav-link" href="/account">返回账号概览</a>
+          <a class="nav-link" href="/account">账号概览</a>
           <a class="nav-link" href="/devices">设备管理</a>
         </div>
       </div>
@@ -48,19 +48,18 @@
     <section class="list">
       {% if items %}
         {% for item in items %}
-          <article class="item {% if item.status == 'done' %}done{% endif %}">
+          <article class="item">
             <div class="item-main grow">
               <div class="item-content">{{ item.content }}</div>
               <div class="item-meta">记录 ID：{{ item.id }}</div>
               <div class="item-meta">账号 ID：{{ item.user_id }}</div>
               <div class="item-meta">来源设备：{{ item.source_device_id or '-' }}</div>
               <div class="item-meta">创建时间：{{ item.created_at or '-' }}</div>
-              <div class="item-meta">状态：{{ '已完成' if item.status == 'done' else '待处理' }}</div>
-            </div>
+                          </div>
           </article>
         {% endfor %}
       {% else %}
-        <div class="empty">这台设备下还没有记录。</div>
+        <div class="empty">这台设备还没有贡献记录。先用这台设备记一条，再回来查看。</div>
       {% endif %}
     </section>
   </main>

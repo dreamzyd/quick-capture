@@ -26,14 +26,14 @@
 
     <section class="capture-box capture-box-focus">
       {% if error %}
-        <p class="error-text">{{ error }}</p>
+        <div class="feedback-panel feedback-error">{{ error }}</div>
       {% endif %}
       {% if success %}
-        <div class="capture-feedback">{{ success }}</div>
+        <div class="feedback-panel feedback-success">{{ success }}</div>
       {% endif %}
       <form action="/create-group" method="post" class="submit-once-form">
         <input type="text" name="group_name" placeholder="输入组名（如：我的工作、我的家庭）" required autofocus maxlength="80" />
-        <p class="form-tip">创建后会进入等待管理员批准状态，在批准前首页不会显示采集界面。</p>
+        <p class="form-tip">创建后会进入等待管理员批准状态。在批准前，你会看到等待页，而不是采集页。</p>
         <div class="action-row action-row-focus">
           <button type="submit" class="primary primary-big" data-loading-text="正在创建...">创建组</button>
         </div>

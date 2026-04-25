@@ -15,8 +15,8 @@
           <p class="subtitle">当前查看账号 {{ user.name }} 下的全部记录，这里是账号层的一次性总览。</p>
         </div>
         <div class="toolbar-actions">
-          <a class="nav-link" href="/account?user_id={{ user.id }}">返回账号概览</a>
-          <a class="nav-link" href="/">返回收件箱</a>
+          <a class="nav-link" href="/account?user_id={{ user.id }}">账号概览</a>
+          <a class="nav-link" href="/">首页</a>
         </div>
       </div>
     </header>
@@ -42,18 +42,17 @@
     <section class="list">
       {% if items %}
         {% for item in items %}
-          <article class="item {% if item.status == 'done' %}done{% endif %}">
+          <article class="item">
             <div class="item-main grow">
               <div class="item-content">{{ item.content }}</div>
               <div class="item-meta">记录 ID：{{ item.id }}</div>
               <div class="item-meta">来源设备：{{ item.source_device_name or 'Unknown' }} ({{ item.source_device_id or '-' }})</div>
               <div class="item-meta">创建时间：{{ item.created_at or '-' }}</div>
-              <div class="item-meta">状态：{{ '已完成' if item.status == 'done' else '待处理' }}</div>
-            </div>
+                          </div>
           </article>
         {% endfor %}
       {% else %}
-        <div class="empty">这个账号下还没有记录。</div>
+        <div class="empty">这个记录组下还没有记录。先去首页记一条，再回来查看。</div>
       {% endif %}
     </section>
   </main>

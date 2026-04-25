@@ -37,8 +37,8 @@
 - [x] 删组二次确认增强，避免误删
 - [x] 管理员模式增加更明显的顶部提示
 - [x] 补齐部分 landing / pending 文案
-- [ ] 补齐错误态 / 空状态文案
-- [ ] landing / pending / join / create-group 再统一一轮样式细节
+- [x] 补齐错误态 / 空状态文案
+- [x] landing / pending / join / create-group 再统一一轮样式细节
 
 ## P2 可选项
 - [ ] 域名绑定（可选）

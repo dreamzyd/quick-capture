@@ -15,7 +15,7 @@
 
     <section class="capture-box capture-box-focus">
       {% if error %}
-        <p class="error-text">{{ error }}</p>
+        <div class="feedback-panel feedback-error">{{ error }}</div>
       {% endif %}
       <form action="/admin/login" method="post">
         <input type="password" name="password" placeholder="输入管理员密码" required autofocus />
@@ -23,6 +23,7 @@
           <button type="submit" class="primary primary-big">进入管理区</button>
         </div>
       </form>
+          <p class="form-tip">如果你只是想记录内容或查看自己的设备，请回到普通首页，不需要进入管理员区。</p>
     </section>
   </main>
 </body>
