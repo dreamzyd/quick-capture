@@ -40,7 +40,6 @@ def init_db():
         CREATE TABLE IF NOT EXISTS inbox_items (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             content TEXT NOT NULL,
-            status TEXT NOT NULL DEFAULT 'inbox',
             created_at TEXT NOT NULL,
             updated_at TEXT NOT NULL
         )
@@ -161,23 +160,23 @@ def get_items(user_id=None, q=None):
     if user_id:
         if q:
             rows = conn.execute(
-                "SELECT id, user_id, source_device_id, content, status, created_at, updated_at FROM inbox_items WHERE user_id = ? AND content LIKE ? ORDER BY created_at DESC, id DESC",
+                "SELECT id, user_id, source_device_id, content, created_at, updated_at FROM inbox_items WHERE user_id = ? AND content LIKE ? ORDER BY created_at DESC, id DESC",
                 (user_id, f"%{q}%")
             ).fetchall()
         else:
             rows = conn.execute(
-                "SELECT id, user_id, source_device_id, content, status, created_at, updated_at FROM inbox_items WHERE user_id = ? ORDER BY created_at DESC, id DESC",
+                "SELECT id, user_id, source_device_id, content, created_at, updated_at FROM inbox_items WHERE user_id = ? ORDER BY created_at DESC, id DESC",
                 (user_id,)
             ).fetchall()
     else:
         if q:
             rows = conn.execute(
-                "SELECT id, user_id, source_device_id, content, status, created_at, updated_at FROM inbox_items WHERE content LIKE ? ORDER BY created_at DESC, id DESC",
+                "SELECT id, user_id, source_device_id, content, created_at, updated_at FROM inbox_items WHERE content LIKE ? ORDER BY created_at DESC, id DESC",
                 (f"%{q}%",)
             ).fetchall()
         else:
             rows = conn.execute(
-                "SELECT id, user_id, source_device_id, content, status, created_at, updated_at FROM inbox_items ORDER BY created_at DESC, id DESC"
+                "SELECT id, user_id, source_device_id, content, created_at, updated_at FROM inbox_items ORDER BY created_at DESC, id DESC"
             ).fetchall()
     conn.close()
     return [dict(r) for r in rows]
@@ -189,7 +188,7 @@ def get_account_items(user_id, q=None):
     if q:
         rows = conn.execute(
             """
-            SELECT i.id, i.user_id, i.source_device_id, i.content, i.status, i.created_at, i.updated_at,
+            SELECT i.id, i.user_id, i.source_device_id, i.content, i.created_at, i.updated_at,
                    COALESCE(d.device_name, 'Unknown') AS source_device_name
             FROM inbox_items i
             LEFT JOIN devices d ON d.device_id = i.source_device_id
@@ -201,7 +200,7 @@ def get_account_items(user_id, q=None):
     else:
         rows = conn.execute(
             """
-            SELECT i.id, i.user_id, i.source_device_id, i.content, i.status, i.created_at, i.updated_at,
+            SELECT i.id, i.user_id, i.source_device_id, i.content, i.created_at, i.updated_at,
                    COALESCE(d.device_name, 'Unknown') AS source_device_name
             FROM inbox_items i
             LEFT JOIN devices d ON d.device_id = i.source_device_id
@@ -221,7 +220,7 @@ def get_device_items(device_id):
         (device_id,)
     ).fetchone()
     rows = conn.execute(
-        "SELECT id, user_id, source_device_id, content, status, created_at, updated_at FROM inbox_items WHERE source_device_id = ? ORDER BY created_at DESC, id DESC",
+        "SELECT id, user_id, source_device_id, content, created_at, updated_at FROM inbox_items WHERE source_device_id = ? ORDER BY created_at DESC, id DESC",
         (device_id,)
     ).fetchall()
     conn.close()
@@ -805,7 +804,7 @@ def add_item():
         conn = get_conn()
         for content in lines:
             conn.execute(
-                "INSERT INTO inbox_items (user_id, source_device_id, content, status, created_at, updated_at) VALUES (?, ?, ?, 'inbox', ?, ?)",
+                "INSERT INTO inbox_items (user_id, source_device_id, content, created_at, updated_at) VALUES (?, ?, ?, ?, ?)",
                 (device["user_id"] if device else 1, device_id, content, now, now),
             )
             added_count += 1
@@ -839,7 +838,7 @@ def export_csv():
         return guard
     items = get_items()
     output = io.StringIO()
-    writer = csv.DictWriter(output, fieldnames=["id", "user_id", "source_device_id", "content", "status", "created_at", "updated_at"])
+    writer = csv.DictWriter(output, fieldnames=["id", "user_id", "source_device_id", "content", "created_at", "updated_at"])
     writer.writeheader()
     writer.writerows(items)
     return Response(

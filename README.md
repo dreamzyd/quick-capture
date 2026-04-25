@@ -1,163 +1,156 @@
 # Quick Capture / 记一下
 
-一个极低摩擦的杂事收集工具，支持电脑端和手机端快速输入，先专注"收集"，后续再处理。
+一个极低摩擦的记录组工具。你可以在手机、电脑、Pad 上快速记内容，同一记录组内的设备共享同一份数据。
 
-## 产品理念
+## 功能概览
 
-- **输入速度第一** - 想到什么就记什么，别打断自己
-- **收集和处理分离** - 先记下来，之后再整理
-- **默认允许很烂的输入** - 不用管格式，不用管分类
-- **多设备共享** - 手机、电脑、Pad 都属于同一个账号，记录互通
-- **架构预留多用户** - 当前优先自己可用，但架构保留未来分享给别人的能力
+- 快速记录内容，支持多行粘贴拆分
+- 多设备加入同一个记录组
+- 新建组走管理员批准
+- 新设备加入走组内已批准设备确认
+- `/me` 管理记录组名称、加入码、设备和 API Token
+- `/api/records` 支持按 token 拉取记录
+- 支持导出 CSV / JSON
 
-## 技术栈
+## 安装
 
-- **后端**: Flask 2.0.3
-- **模板**: Jinja2
-- **前端交互**: HTMX
-- **数据库**: SQLite
-- **样式**: 原生 CSS
-- **部署**: Docker Compose
-
-## 快速开始
-
-### 环境要求
-
-- Docker
-- Docker Compose
-
-### 启动
+### 1. 准备目录
 
 ```bash
+git clone git@github.com:dreamzyd/quick-capture.git
 cd quick-capture
-docker compose up -d --build
+mkdir -p data
 ```
 
-服务默认运行在 `http://localhost:18901`
+### 2. 修改管理员密码
 
-## 产品模型
-
-### 账号体系
-
-- 一个用户 = 一个账号空间
-- 一个用户可有多个设备（手机、电脑、Pad）
-- 用户的所有设备都能看到该账号下的全部记录
-- 不同用户之间的数据严格隔离
-
-### 页面结构
-
-- **首页 `/`** - 快速采集入口，显示当前账号记录
-- **我的账号 `/me`** - 用户空间，包含账号信息、加入码、设备管理
-- **加入页 `/join`** - 新设备通过加入码并入已有账号
-- **管理员后台 `/admin/*`** - 系统管理员专用，负责批准新账号
-
-### 管理员
-
-管理员通过环境变量配置：
+编辑 `docker-compose.yml`，设置你自己的管理员密码：
 
 ```yaml
 environment:
   - QUICK_CAPTURE_ADMIN_PASSWORD=your-password
 ```
 
-管理员职责：
-- 批准新账号首次开通
-- 查看系统状态
-- 不做普通用户的设备管理
-
-## 功能列表
-
-### 采集
-- 快速新增记录
-- 多行粘贴自动拆分
-- Ctrl/⌘ + Enter 快速提交
-- 公开首页只采集，不读记录
-
-### 查看
-- 首页显示当前账号记录
-- 轻量搜索 / 文本过滤
-- 数据导出（CSV / JSON）
-
-### 账号管理
-- 账号首次审批
-- 加入码 / join link
-- 设备自管理（改名、查看）
-
-### 管理员后台
-- 待审批账号列表
-- 已开通账号列表
-- 批准 / 查看
-
-## 部署
-
-### Docker Compose
-
-```yaml
-version: '3.8'
-services:
-  quick-capture:
-    build: .
-    container_name: quick-capture
-    ports:
-      - "18901:18901"
-    volumes:
-      - ./data:/app/data
-    environment:
-      - QUICK_CAPTURE_DB=/app/data/quick_capture.db
-      - QUICK_CAPTURE_ADMIN_PASSWORD=your-password
-    restart: unless-stopped
-```
-
-### 数据持久化
-
-数据存储在 `./data` 目录，通过 Docker volume 挂载。
-
-## 开发
-
-### 项目结构
-
-```
-quick-capture/
-├── app/
-│   ├── main.py          # Flask 应用主文件
-│   ├── templates/       # Jinja2 模板
-│   └── static/          # 静态文件
-├── data/                # SQLite 数据库
-├── Dockerfile
-├── docker-compose.yml
-├── requirements.txt
-├── TODO.md
-└── README.md
-```
-
-### 本地开发
+### 3. 启动
 
 ```bash
-pip install -r requirements.txt
-python app/main.py
+docker compose up -d --build quick-capture
 ```
 
-## 未来计划
+默认访问地址：
 
-- [ ] 同账号多设备共享记录
-- [ ] 用户自管理设备群
-- [ ] 邀请链接 / 邀请码
-- [ ] 外网入口 / HTTPS
-- [ ] 每日回顾视图
+- 本机：`http://localhost:18901`
+- 局域网 / 外网：`http://<你的IP>:18901`
 
-## License
+## 使用说明
 
-MIT
+### 新建记录组
 
+1. 首次访问首页
+2. 选择“新建组”
+3. 输入记录组名称
+4. 等待管理员批准
+5. 批准后回到首页即可开始记录
 
-## API 返回说明
+### 加入已有记录组
 
-`/api/records` 当前返回的每条记录包含：
+1. 在已开通设备的 `/me` 页面拿到加入码
+2. 新设备访问首页，选择“加入组”
+3. 输入加入码
+4. 等待组内已批准设备确认
+5. 批准后即可加入同一个记录组
 
-- `id`
-- `content`
-- `created_at`
-- `source_device_id`
-- `source_device_name`
+### 管理记录组
 
-说明：当前产品不再维护“是否完成/已处理”流程，因此 API 不再强调 `status` 字段。
+访问 `/me` 可以：
+
+- 修改记录组名称
+- 查看加入码
+- 管理当前设备和已批准设备
+- 批准新加入设备
+- 配置 API Token
+
+### 管理员操作
+
+管理员登录入口：
+
+- `/admin/login`
+
+管理员可以：
+
+- 批准新建记录组
+- 查看已开通记录组
+- 删除整个记录组（会同时删除组、设备、记录）
+
+## API
+
+### 拉取记录
+
+```bash
+curl "http://127.0.0.1:18901/api/records?token=YOUR_TOKEN&since=1d"
+```
+
+支持的 `since` 参数：
+
+- `30m` 最近 30 分钟
+- `1h` 最近 1 小时
+- `6h` 最近 6 小时
+- `1d` 最近 1 天
+- `7d` 最近 7 天
+
+返回字段示例：
+
+```json
+{
+  "user": "GOTI",
+  "count": 2,
+  "records": [
+    {
+      "id": 12,
+      "content": "买电池",
+      "created_at": "2026-04-25T14:10:00",
+      "source_device_id": "device-uuid",
+      "source_device_name": "iPhone"
+    }
+  ]
+}
+```
+
+## 重置
+
+如果你要清空测试数据并重新开始：
+
+```bash
+./scripts/reset-dev.sh
+```
+
+这个脚本会：
+
+1. 备份当前数据库到 `data/backups/`
+2. 删除当前数据库
+3. 重新 build 并启动容器
+
+## 数据目录
+
+- 数据库：`data/quick_capture.db`
+- 备份：`data/backups/`
+
+## 常用命令
+
+### 重建服务
+
+```bash
+docker compose up -d --build quick-capture
+```
+
+### 查看日志
+
+```bash
+docker compose logs -f quick-capture
+```
+
+### 停止服务
+
+```bash
+docker compose stop quick-capture
+```
