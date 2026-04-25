@@ -20,6 +20,24 @@ ADMIN_COOKIE = "qc_admin"
 app = Flask(__name__, template_folder=str(BASE_DIR / "app" / "templates"), static_folder=str(BASE_DIR / "app" / "static"))
 
 
+CN_OFFSET = "+08:00"
+
+
+def now_local_iso():
+    return datetime.now().replace(microsecond=0).isoformat() + CN_OFFSET
+
+
+def format_cn_time(value):
+    if not value:
+        return "-"
+    raw = str(value).strip()
+    if raw.endswith(CN_OFFSET):
+        raw = raw[:-6]
+    if raw.endswith("Z"):
+        raw = raw[:-1]
+    return raw.replace("T", " ")
+
+
 def get_conn():
     conn = sqlite3.connect(str(DB_PATH), timeout=8)
     conn.row_factory = sqlite3.Row
@@ -85,6 +103,11 @@ def init_db():
     conn.close()
 
 
+@app.template_filter("cn_time")
+def cn_time_filter(value):
+    return format_cn_time(value)
+
+
 def admin_cookie_value():
     if not ADMIN_PASSWORD:
         return None
@@ -120,7 +143,7 @@ def generate_join_code():
 def create_pending_user(conn):
     name = f"user-{uuid.uuid4().hex[:6]}"
     join_code = generate_join_code()
-    now = datetime.now().isoformat(timespec="seconds")
+    now = now_local_iso()
     conn.execute(
         "INSERT INTO users (name, approval_status, join_code, created_at) VALUES (?, 'pending', ?, ?)",
         (name, join_code, now),
@@ -137,7 +160,7 @@ def ensure_user_join_code(conn, user_id):
 
 def get_or_create_device(device_id):
     conn = get_conn()
-    now = datetime.now().isoformat(timespec="seconds")
+    now = now_local_iso()
     conn.execute(
         "INSERT OR IGNORE INTO devices (device_id, device_name, trusted, provision_source, user_id, last_seen_at) VALUES (?, 'Unknown', 0, 'first-visit', NULL, ?)",
         (device_id, now)
@@ -283,7 +306,7 @@ def get_users(approval_status=None):
 
 def approve_user(user_id):
     conn = get_conn()
-    now = datetime.now().isoformat(timespec="seconds")
+    now = now_local_iso()
     token = uuid.uuid4().hex[:16]
     conn.execute(
         "UPDATE users SET approval_status = 'approved', approved_at = COALESCE(approved_at, ?), join_code = COALESCE(join_code, ?), api_token = COALESCE(api_token, ?) WHERE id = ?",
@@ -335,7 +358,7 @@ def join_account_by_code(device_id, join_code):
             return True, "这台设备已经在该组里了。"
         conn.execute(
             "UPDATE devices SET user_id = ?, trusted = 0, provision_source = 'join-code', pending_approval = 1, last_seen_at = ? WHERE device_id = ?",
-            (user["id"], datetime.now().isoformat(timespec="seconds"), device_id),
+            (user["id"], now_local_iso(), device_id),
         )
     else:
         conn.execute(
@@ -373,7 +396,7 @@ def update_device_name(device_id, device_name):
     conn = get_conn()
     conn.execute(
         "UPDATE devices SET device_name = ?, last_seen_at = ? WHERE device_id = ?",
-        (clean_name, datetime.now().isoformat(timespec="seconds"), device_id),
+        (clean_name, now_local_iso(), device_id),
     )
     conn.commit()
     conn.close()
@@ -498,7 +521,7 @@ def toggle_device_trusted(device_id):
         next_trusted = 0 if row["trusted"] else 1
         conn.execute(
             "UPDATE devices SET trusted = ?, last_seen_at = ? WHERE device_id = ?",
-            (next_trusted, datetime.now().isoformat(timespec="seconds"), device_id),
+            (next_trusted, now_local_iso(), device_id),
         )
         conn.commit()
     conn.close()
@@ -607,7 +630,7 @@ def create_group_submit():
         return resp
     # 创建新组（pending 状态，等待管理员批准）
     conn = get_conn()
-    now = datetime.now().isoformat(timespec="seconds")
+    now = now_local_iso()
     join_code = generate_join_code()
     conn.execute(
         "INSERT INTO users (name, approval_status, join_code, created_at) VALUES (?, 'pending', ?, ?)",
@@ -800,7 +823,7 @@ def add_item():
     lines = [line.strip() for line in raw.splitlines() if line.strip()]
     added_count = 0
     if lines:
-        now = datetime.now().isoformat(timespec="seconds")
+        now = now_local_iso()
         conn = get_conn()
         for content in lines:
             conn.execute(
@@ -854,7 +877,7 @@ def export_json():
     if guard:
         return guard
     payload = {
-        "exported_at": datetime.now().isoformat(timespec="seconds"),
+        "exported_at": now_local_iso(),
         "items": get_items(),
     }
     return Response(
