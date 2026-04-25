@@ -292,8 +292,11 @@ def approve_user(user_id):
         "UPDATE users SET approval_status = 'approved', approved_at = COALESCE(approved_at, ?), join_code = COALESCE(join_code, ?), api_token = COALESCE(api_token, ?) WHERE id = ?",
         (now, generate_join_code(), token, user_id),
     )
-    # 自动批准该账号的所有设备
-    conn.execute("UPDATE devices SET pending_approval = 0 WHERE user_id = ?", (user_id,))
+    # 管理员批准账号时，只自动放行创组首设备，后续 join-code 设备仍走组内审批
+    conn.execute(
+        "UPDATE devices SET pending_approval = 0, trusted = 1 WHERE user_id = ? AND provision_source = 'create-group'",
+        (user_id,),
+    )
     conn.commit()
     conn.close()
 
@@ -313,16 +316,22 @@ def join_account_by_code(device_id, join_code):
     if user["approval_status"] != "approved":
         conn.close()
         return False, "这个账号还没开通。"
-    # 先检查设备是否已存在
-    existing = conn.execute("SELECT user_id, pending_approval FROM devices WHERE device_id = ?", (device_id,)).fetchone()
+    existing = conn.execute(
+        "SELECT user_id, pending_approval, provision_source FROM devices WHERE device_id = ?",
+        (device_id,)
+    ).fetchone()
     if existing:
-        # 设备已存在，改 user_id 并重新设为 pending
+        if existing["user_id"] == user["id"] and existing["pending_approval"]:
+            conn.close()
+            return True, "这台设备已经提交过加入申请，请等待组内设备批准。"
+        if existing["user_id"] == user["id"] and not existing["pending_approval"]:
+            conn.close()
+            return True, "这台设备已经在该组里了。"
         conn.execute(
-            "UPDATE devices SET user_id = ?, provision_source = 'join-code', pending_approval = 1, last_seen_at = ? WHERE device_id = ?",
+            "UPDATE devices SET user_id = ?, trusted = 0, provision_source = 'join-code', pending_approval = 1, last_seen_at = ? WHERE device_id = ?",
             (user["id"], datetime.now().isoformat(timespec="seconds"), device_id),
         )
     else:
-        # 新设备，创建并设为 pending
         conn.execute(
             "INSERT INTO devices (user_id, device_id, device_name, trusted, provision_source, pending_approval) VALUES (?, ?, 'Unknown', 0, 'join-code', 1)",
             (user["id"], device_id),
@@ -333,7 +342,7 @@ def join_account_by_code(device_id, join_code):
     )
     conn.commit()
     conn.close()
-    return True, None
+    return True, "已提交加入申请，等待组内设备批准后即可查看记录。"
 
 
 def get_account_summary(user_id):
@@ -615,12 +624,14 @@ def join_submit():
     if not device_id:
         device_id = str(uuid.uuid4())
     device = get_or_create_device(device_id)
-    ok, error = join_account_by_code(device_id, request.form.get("join_code", ""))
+    ok, message = join_account_by_code(device_id, request.form.get("join_code", ""))
     joined_device = get_or_create_device(device_id)
     if ok:
-        success_msg = "已提交加入申请，等待组内设备批准后即可查看记录。"
+        success_msg = message
+        error = None
     else:
         success_msg = None
+        error = message
     resp = make_response(render_template("join.html", device=joined_device, error=error, success=success_msg))
     resp.set_cookie("qc_device_id", device_id, max_age=31536000, httponly=True)
     return resp
@@ -651,10 +662,17 @@ def me_page():
     if not device_id:
         return redirect(url_for("index"))
     device = get_or_create_device(device_id)
+    if not device.get("user_id"):
+        return redirect(url_for("index"))
     if device.get("pending_approval"):
         return redirect(url_for("index"))
     summary = get_account_summary(device["user_id"])
     devices = get_devices(user_id=device["user_id"], pending_approval=False)
+    current_device = next((item for item in devices if item["device_id"] == device_id), None)
+    if not current_device:
+        resp = redirect(url_for("index"))
+        resp.delete_cookie("qc_device_id")
+        return resp
     pending_devices = get_devices(user_id=device["user_id"], pending_approval=True)
     return render_template("me.html", summary=summary, devices=devices, pending_devices=pending_devices, current_device_id=device_id, is_admin=is_admin_authenticated())
 
