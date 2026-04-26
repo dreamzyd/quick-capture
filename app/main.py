@@ -633,7 +633,7 @@ def approve_device_from_group(current_device_id, target_device_id):
     if current["user_id"] != target["user_id"]:
         conn.close()
         return False, "只能批准同组设备"
-    conn.execute("UPDATE devices SET pending_approval = 0 WHERE device_id = ?", (target_device_id,))
+    conn.execute("UPDATE devices SET pending_approval = 0, trusted = 1, last_seen_at = ? WHERE device_id = ?", (now_local_iso(), target_device_id))
     conn.commit()
     conn.close()
     return True, None
@@ -961,7 +961,7 @@ def rename_device(device_id):
     current_device_id = request.cookies.get("qc_device_id")
     if current_device_id == device_id:
         update_device_name(device_id, request.form.get("device_name", ""))
-        return redirect(url_for("index"))
+        return redirect(url_for("me_page"))
     guard = admin_guard()
     if guard:
         return guard
