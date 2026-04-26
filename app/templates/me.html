@@ -97,6 +97,20 @@
         {% if token_success %}
           <div class="feedback-panel feedback-success compact-feedback">{{ token_success }}</div>
         {% endif %}
+
+        <div style="margin-top: 14px; border-top: 1px solid var(--border); padding-top: 12px;">
+          <label style="display:block; font-size:14px; font-weight:600; margin-bottom:8px;">API IP 白名单</label>
+          <form class="rename-form" action="/me/update-ip-whitelist" method="post">
+            <textarea name="ip_whitelist" rows="4" placeholder="每行一个 IP 或 CIDR，例如：&#10;1.2.3.4&#10;192.168.1.0/24&#10;留空表示不限制 IP" style="width:100%; border-radius:10px; border:1px solid var(--border); background:var(--panel-2); color:var(--text); padding:10px; font-size:13px; font-family:monospace;">{{ summary.user.api_ip_whitelist or '' }}</textarea>
+            <div style="display:flex; gap:10px; margin-top:10px; flex-wrap:wrap;">
+              <button type="submit" class="secondary-button compact">保存白名单</button>
+              <span style="font-size:12px; color:var(--muted); align-self:center;">留空表示不限制 IP，仅对 /api/records 生效</span>
+            </div>
+          </form>
+          <div class="item-meta" style="margin-top: 8px; font-size: 12px;">
+            <strong>提示：</strong>支持 IPv4 / IPv6 和 CIDR 网段。设置后，只有白名单 IP 能用 API Token 拉取记录。<br>
+          </div>
+        </div>
       </article>
       <article class="summary-card">
         <div class="summary-label">Recovery Token</div>

@@ -7,6 +7,7 @@ import io
 import json
 import os
 import re
+import ipaddress
 import sqlite3
 import uuid
 
@@ -156,6 +157,40 @@ def is_admin_view():
 
 def generate_join_code():
     return uuid.uuid4().hex[:12]
+
+
+def is_ip_in_whitelist(ip_str, whitelist_raw):
+    if not whitelist_raw or not whitelist_raw.strip():
+        return True
+    try:
+        ip = ipaddress.ip_address(ip_str)
+    except ValueError:
+        return False
+    for line in whitelist_raw.splitlines():
+        line = line.strip()
+        if not line or line.startswith('#'):
+            continue
+        try:
+            if '/' in line:
+                network = ipaddress.ip_network(line, strict=False)
+                if ip in network:
+                    return True
+            else:
+                allowed = ipaddress.ip_address(line)
+                if ip == allowed:
+                    return True
+        except ValueError:
+            continue
+    return False
+
+
+def get_client_ip():
+    forwarded = request.headers.get('X-Forwarded-For', '').strip()
+    if forwarded:
+        first = forwarded.split(',')[0].strip()
+        if first:
+            return first
+    return request.remote_addr or '127.0.0.1'
 
 
 def hash_token(token):
@@ -966,6 +1001,16 @@ def api_records():
     user = get_user_by_token(token)
     if not user:
         return Response(json.dumps({"error": "无效 token"}), status=401, mimetype="application/json")
+    # IP 白名单校验
+    conn = get_conn()
+    user_row = conn.execute("SELECT api_token, api_ip_whitelist FROM users WHERE id = ?", (user["id"],)).fetchone()
+    if user_row and user_row["api_token"]:
+        whitelist = user_row.get("api_ip_whitelist", "")
+        client_ip = get_client_ip()
+        if not is_ip_in_whitelist(client_ip, whitelist):
+            conn.close()
+            return Response(json.dumps({"error": "IP not allowed"}), status=403, mimetype="application/json; charset=utf-8")
+    conn.close()
     records = get_records_by_time(user["id"], since if since else None)
     return Response(json.dumps({"user": user["name"], "count": len(records), "records": records}, ensure_ascii=False), mimetype="application/json")
 
