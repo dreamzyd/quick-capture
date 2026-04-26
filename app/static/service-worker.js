@@ -1,4 +1,4 @@
-const CACHE_NAME = "quick-capture-v1";
+const CACHE_NAME = "quick-capture-v2";
 const ASSETS = [
   "/",
   "/me",

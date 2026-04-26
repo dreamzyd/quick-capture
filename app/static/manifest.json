@@ -1,14 +1,44 @@
 {
+  "id": "/",
   "name": "记一下",
   "short_name": "记一下",
-  "start_url": "/",
+  "start_url": "/?source=pwa",
   "scope": "/",
   "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
   "background_color": "#0f1115",
   "theme_color": "#0f1115",
   "description": "极低摩擦的杂事收集工具，先记下来，别打断自己。",
+  "prefer_related_applications": false,
   "icons": [
-    {"src": "/static/icons/icon-192.png", "sizes": "192x192", "type": "image/png"},
-    {"src": "/static/icons/icon-512.png", "sizes": "512x512", "type": "image/png"}
+    {
+      "src": "/static/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/static/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "立即记一下",
+      "short_name": "立即记",
+      "url": "/?source=shortcut",
+      "description": "快速打开记录页"
+    },
+    {
+      "name": "我的账号",
+      "short_name": "账号",
+      "url": "/me?source=shortcut",
+      "description": "打开账号与设备管理"
+    }
   ]
 }

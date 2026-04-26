@@ -69,6 +69,8 @@
       {% endif %}
     </section>
 
+    <section id="pwa-install-tip" class="hint-block" style="display:none; margin-top: -4px; margin-bottom: 16px;">如果你在安卓 Chrome 里打开，可以从浏览器菜单选择“添加到主屏幕”或“安装应用”，以后会更像独立 App。</section>
+
     <section class="quick-links">
       <a class="subtle-link" href="/join">让新设备加入这个记录组</a>
     </section>
@@ -76,6 +78,10 @@
 
   <script>
     const input = document.getElementById('capture-input');
+    const installTip = document.getElementById('pwa-install-tip');
+    if (window.matchMedia && !window.matchMedia('(display-mode: standalone)').matches && /Android/i.test(navigator.userAgent)) {
+      installTip.style.display = "block";
+    }
     input.addEventListener('keydown', function (e) {
       if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
         e.preventDefault();
