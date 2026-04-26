@@ -878,6 +878,23 @@ def update_recovery_token_route():
     return render_template("me.html", summary=summary, devices=devices, pending_devices=pending_devices, current_device_id=device_id, is_admin=is_admin_authenticated(), recovery_error=message if not ok else None, recovery_success=message if ok else None)
 
 
+@app.route("/me/update-ip-whitelist", methods=["POST"])
+def update_ip_whitelist():
+    device_id = request.cookies.get("qc_device_id")
+    if not device_id:
+        return redirect(url_for("index"))
+    device = get_or_create_device(device_id)
+    whitelist = request.form.get("ip_whitelist", "").strip()
+    conn = get_conn()
+    conn.execute("UPDATE users SET api_ip_whitelist = ? WHERE id = ?", (whitelist, device["user_id"]))
+    conn.commit()
+    conn.close()
+    summary = get_account_summary(device["user_id"])
+    devices = get_devices(user_id=device["user_id"], pending_approval=False)
+    pending_devices = get_devices(user_id=device["user_id"], pending_approval=True)
+    return render_template("me.html", summary=summary, devices=devices, pending_devices=pending_devices, current_device_id=device_id, is_admin=is_admin_authenticated(), whitelist_success="IP 白名单已更新")
+
+
 @app.route("/me/recover-device", methods=["POST"])
 def recover_device_route():
     device_id = request.cookies.get("qc_device_id")
@@ -1005,7 +1022,7 @@ def api_records():
     conn = get_conn()
     user_row = conn.execute("SELECT api_token, api_ip_whitelist FROM users WHERE id = ?", (user["id"],)).fetchone()
     if user_row and user_row["api_token"]:
-        whitelist = user_row.get("api_ip_whitelist", "")
+        whitelist = user_row["api_ip_whitelist"] or ""
         client_ip = get_client_ip()
         if not is_ip_in_whitelist(client_ip, whitelist):
             conn.close()
