@@ -3,3 +3,5 @@ __pycache__/
 data/backups/*.db
 quick_capture.db
 data/quick_capture.db
+
+TODO.md
