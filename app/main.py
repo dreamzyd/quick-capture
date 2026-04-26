@@ -116,6 +116,7 @@ def init_db():
     ensure_column(conn, "users", "api_ip_whitelist", "ALTER TABLE users ADD COLUMN api_ip_whitelist TEXT")
     conn.execute("UPDATE inbox_items SET user_id = 1 WHERE user_id IS NULL")
     conn.execute("UPDATE users SET approved_at = COALESCE(approved_at, created_at) WHERE approval_status = 'approved'")
+    normalize_device_states(conn)
     # 清理历史重复 device_id，只保留每个 device_id 最后一条记录
     conn.execute("DELETE FROM devices WHERE id NOT IN (SELECT MAX(id) FROM devices GROUP BY device_id)")
     conn.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_devices_device_id_unique ON devices(device_id)")
@@ -667,6 +668,20 @@ def remove_device_from_account(current_device_id, target_device_id):
     return True
 
 
+def normalize_device_states(conn):
+    """Normalize legacy device rows to avoid ghost states."""
+    conn.execute(
+        """
+        UPDATE devices
+        SET trusted = 1
+        WHERE user_id IN (SELECT id FROM users WHERE approval_status = 'approved')
+          AND pending_approval = 0
+          AND trusted = 0
+          AND user_id IS NOT NULL
+        """
+    )
+
+
 def build_export_filename(ext):
     timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
     return f"quick-capture-export-{timestamp}.{ext}"
@@ -1001,17 +1016,19 @@ def add_item():
     device = get_or_create_device(device_id) if device_id else None
     lines = [line.strip() for line in raw.splitlines() if line.strip()]
     added_count = 0
-    if lines:
+    if lines and device and device.get("user_id"):
         now = now_local_iso()
         conn = get_conn()
         for content in lines:
             conn.execute(
                 "INSERT INTO inbox_items (user_id, source_device_id, content, created_at, updated_at) VALUES (?, ?, ?, ?, ?)",
-                (device["user_id"] if device else 1, device_id, content, now, now),
+                (device["user_id"], device_id, content, now, now),
             )
             added_count += 1
         conn.commit()
         conn.close()
+    if device and not device.get("user_id"):
+        return render_template("_capture_result.html", added_count=0)
     # pending 设备提交后只显示等待批准提示
     if device and device.get("pending_approval"):
         return render_template("_capture_result.html", added_count=added_count)
