@@ -3,6 +3,11 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#0f1115" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <link rel="manifest" href="/manifest.json" />
+  <link rel="apple-touch-icon" href="/static/icons/apple-touch-icon.png" />
   <title>记一下</title>
   <link rel="stylesheet" href="/static/style.css" />
 </head>
@@ -22,5 +27,14 @@
       <p class="hint landing-hint">新建组需要管理员批准，加入组需要组内设备批准。一个组内的设备会共享同一份记录。</p>
     </section>
   </main>
+  <script>
+    if ("serviceWorker" in navigator) {
+      window.addEventListener("load", function () {
+        navigator.serviceWorker.register("/service-worker.js").catch(function (err) {
+          console.warn("service worker register failed", err);
+        });
+      });
+    }
+  </script>
 </body>
 </html>

@@ -11,7 +11,7 @@ import ipaddress
 import sqlite3
 import uuid
 
-from flask import Flask, render_template, request, make_response, Response, redirect, url_for
+from flask import Flask, render_template, request, make_response, Response, redirect, url_for, send_from_directory
 from werkzeug.middleware.proxy_fix import ProxyFix
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -673,6 +673,16 @@ def build_export_filename(ext):
 
 
 init_db()
+
+
+@app.route("/manifest.json")
+def manifest():
+    return send_from_directory(str(BASE_DIR / "app" / "static"), "manifest.json", mimetype="application/manifest+json")
+
+
+@app.route("/service-worker.js")
+def service_worker():
+    return send_from_directory(str(BASE_DIR / "app" / "static"), "service-worker.js", mimetype="application/javascript")
 
 
 @app.route("/")
