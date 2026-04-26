@@ -11,6 +11,7 @@ import sqlite3
 import uuid
 
 from flask import Flask, render_template, request, make_response, Response, redirect, url_for
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 DB_PATH = Path(os.environ.get("QUICK_CAPTURE_DB", str(BASE_DIR / "quick_capture.db")))
@@ -19,6 +20,7 @@ ADMIN_PASSWORD = os.environ.get("QUICK_CAPTURE_ADMIN_PASSWORD", "")
 ADMIN_COOKIE = "qc_admin"
 
 app = Flask(__name__, template_folder=str(BASE_DIR / "app" / "templates"), static_folder=str(BASE_DIR / "app" / "static"))
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_port=1)
 
 RECOVERY_TOKEN_MIN_LENGTH = 24
 RECOVERY_TOKEN_MAX_LENGTH = 128
