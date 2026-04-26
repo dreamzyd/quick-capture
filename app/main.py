@@ -275,24 +275,53 @@ def ensure_user_join_code(conn, user_id):
         conn.execute("UPDATE users SET join_code = ? WHERE id = ?", (generate_join_code(), user_id))
 
 
-def get_or_create_device(device_id):
+def get_device(device_id):
+    if not device_id:
+        return None
     conn = get_conn()
-    now = now_local_iso()
-    conn.execute(
-        "INSERT OR IGNORE INTO devices (device_id, device_name, trusted, provision_source, user_id, last_seen_at) VALUES (?, 'Unknown', 0, 'first-visit', NULL, ?)",
-        (device_id, now)
-    )
-    conn.execute(
-        "UPDATE devices SET last_seen_at = ? WHERE device_id = ?",
-        (now, device_id),
-    )
-    conn.commit()
-    refreshed = conn.execute(
+    row = conn.execute(
         "SELECT d.id, d.user_id, d.device_id, d.device_name, d.trusted, d.provision_source, d.pending_approval, u.approval_status, u.join_code, u.name AS user_name FROM devices d LEFT JOIN users u ON u.id = d.user_id WHERE d.device_id = ? ORDER BY d.id DESC LIMIT 1",
         (device_id,)
     ).fetchone()
     conn.close()
-    return dict(refreshed)
+    return dict(row) if row else None
+
+
+def touch_device(device_id):
+    if not device_id:
+        return None
+    conn = get_conn()
+    conn.execute("UPDATE devices SET last_seen_at = ? WHERE device_id = ?", (now_local_iso(), device_id))
+    conn.commit()
+    row = conn.execute(
+        "SELECT d.id, d.user_id, d.device_id, d.device_name, d.trusted, d.provision_source, d.pending_approval, u.approval_status, u.join_code, u.name AS user_name FROM devices d LEFT JOIN users u ON u.id = d.user_id WHERE d.device_id = ? ORDER BY d.id DESC LIMIT 1",
+        (device_id,)
+    ).fetchone()
+    conn.close()
+    return dict(row) if row else None
+
+
+def ensure_device_record(device_id, *, user_id=None, device_name='Unknown', trusted=0, provision_source='direct', pending_approval=0):
+    conn = get_conn()
+    now = now_local_iso()
+    existing = conn.execute("SELECT id FROM devices WHERE device_id = ?", (device_id,)).fetchone()
+    if existing:
+        conn.execute(
+            "UPDATE devices SET user_id = COALESCE(?, user_id), device_name = COALESCE(?, device_name), trusted = ?, provision_source = ?, pending_approval = ?, last_seen_at = ? WHERE device_id = ?",
+            (user_id, device_name, trusted, provision_source, pending_approval, now, device_id),
+        )
+    else:
+        conn.execute(
+            "INSERT INTO devices (user_id, device_id, device_name, trusted, provision_source, pending_approval, last_seen_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (user_id, device_id, device_name, trusted, provision_source, pending_approval, now),
+        )
+    conn.commit()
+    row = conn.execute(
+        "SELECT d.id, d.user_id, d.device_id, d.device_name, d.trusted, d.provision_source, d.pending_approval, u.approval_status, u.join_code, u.name AS user_name FROM devices d LEFT JOIN users u ON u.id = d.user_id WHERE d.device_id = ? ORDER BY d.id DESC LIMIT 1",
+        (device_id,)
+    ).fetchone()
+    conn.close()
+    return dict(row)
 
 
 def get_items(user_id=None, q=None):
@@ -473,15 +502,15 @@ def join_account_by_code(device_id, join_code):
         if existing["user_id"] == user["id"] and not existing["pending_approval"]:
             conn.close()
             return True, "这台设备已经在该组里了。"
-        conn.execute(
-            "UPDATE devices SET user_id = ?, trusted = 0, provision_source = 'join-code', pending_approval = 1, last_seen_at = ? WHERE device_id = ?",
-            (user["id"], now_local_iso(), device_id),
-        )
+        conn.commit()
+        conn.close()
+        ensure_device_record(device_id, user_id=user["id"], trusted=0, provision_source='join-code', pending_approval=1)
+        conn = get_conn()
     else:
-        conn.execute(
-            "INSERT INTO devices (user_id, device_id, device_name, trusted, provision_source, pending_approval) VALUES (?, ?, 'Unknown', 0, 'join-code', 1)",
-            (user["id"], device_id),
-        )
+        conn.commit()
+        conn.close()
+        ensure_device_record(device_id, user_id=user["id"], trusted=0, provision_source='join-code', pending_approval=1)
+        conn = get_conn()
     conn.execute(
         "UPDATE inbox_items SET user_id = ? WHERE source_device_id = ?",
         (user["id"], device_id),
@@ -705,9 +734,9 @@ def index():
     device_id = request.cookies.get("qc_device_id")
     if not device_id:
         device_id = str(uuid.uuid4())
-    device = get_or_create_device(device_id)
+    device = touch_device(device_id) or get_device(device_id)
     # 新用户（未加入任何组）显示着陆页
-    if not device.get("user_id"):
+    if not device or not device.get("user_id"):
         resp = make_response(render_template("index_landing.html", device=device))
         resp.set_cookie("qc_device_id", device_id, max_age=31536000, httponly=True)
         return resp
@@ -750,7 +779,7 @@ def join_page():
     device_id = request.cookies.get("qc_device_id")
     if not device_id:
         device_id = str(uuid.uuid4())
-    device = get_or_create_device(device_id)
+    device = touch_device(device_id) or get_device(device_id)
     resp = make_response(render_template("join.html", device=device, error=None, success=None))
     resp.set_cookie("qc_device_id", device_id, max_age=31536000, httponly=True)
     return resp
@@ -761,7 +790,7 @@ def create_group_page():
     device_id = request.cookies.get("qc_device_id")
     if not device_id:
         device_id = str(uuid.uuid4())
-    device = get_or_create_device(device_id)
+    device = touch_device(device_id) or get_device(device_id)
     resp = make_response(render_template("create_group.html", device=device))
     resp.set_cookie("qc_device_id", device_id, max_age=31536000, httponly=True)
     return resp
@@ -772,7 +801,7 @@ def create_group_submit():
     device_id = request.cookies.get("qc_device_id")
     if not device_id:
         device_id = str(uuid.uuid4())
-    device = get_or_create_device(device_id)
+    device = touch_device(device_id) or get_device(device_id)
     group_name = request.form.get("group_name", "").strip()
     if not group_name:
         resp = make_response(render_template("create_group.html", device=device, error="请输入组名"))
@@ -788,12 +817,9 @@ def create_group_submit():
     )
     user_id = conn.execute("SELECT last_insert_rowid() AS id").fetchone()["id"]
     # 首台设备自动绑定到新建组，但仍需管理员批准
-    conn.execute(
-        "UPDATE devices SET user_id = ?, provision_source = 'create-group', pending_approval = 1 WHERE device_id = ?",
-        (user_id, device_id),
-    )
     conn.commit()
     conn.close()
+    ensure_device_record(device_id, user_id=user_id, trusted=0, provision_source='create-group', pending_approval=1)
     resp = make_response(render_template("create_group.html", device=device, success="组已创建，等待管理员批准"))
     resp.set_cookie("qc_device_id", device_id, max_age=31536000, httponly=True)
     return resp
@@ -804,9 +830,9 @@ def join_submit():
     device_id = request.cookies.get("qc_device_id")
     if not device_id:
         device_id = str(uuid.uuid4())
-    device = get_or_create_device(device_id)
+    device = touch_device(device_id) or get_device(device_id)
     ok, message = join_account_by_code(device_id, request.form.get("join_code", ""))
-    joined_device = get_or_create_device(device_id)
+    joined_device = touch_device(device_id) or get_device(device_id)
     if ok:
         success_msg = message
         error = None
@@ -851,7 +877,7 @@ def me_page():
     device_id = request.cookies.get("qc_device_id")
     if not device_id:
         return redirect(url_for("index"))
-    device = get_or_create_device(device_id)
+    device = touch_device(device_id) or get_device(device_id)
     if not device.get("user_id"):
         return redirect(url_for("index"))
     if device.get("pending_approval"):
@@ -872,7 +898,7 @@ def rename_account():
     device_id = request.cookies.get("qc_device_id")
     if not device_id:
         return redirect(url_for("index"))
-    device = get_or_create_device(device_id)
+    device = touch_device(device_id) or get_device(device_id)
     update_user_name(device["user_id"], request.form.get("user_name", ""))
     return redirect(url_for("me_page"))
 
@@ -882,7 +908,7 @@ def update_token():
     device_id = request.cookies.get("qc_device_id")
     if not device_id:
         return redirect(url_for("index"))
-    device = get_or_create_device(device_id)
+    device = touch_device(device_id) or get_device(device_id)
     user_suffix = request.form.get("token_suffix", "")
     ok, error = update_user_api_token(device["user_id"], user_suffix)
     summary = get_account_summary(device["user_id"])
@@ -895,7 +921,7 @@ def update_recovery_token_route():
     device_id = request.cookies.get("qc_device_id")
     if not device_id:
         return redirect(url_for("index"))
-    device = get_or_create_device(device_id)
+    device = touch_device(device_id) or get_device(device_id)
     raw_token = request.form.get("recovery_token", "")
     ok, message = update_user_recovery_token(device["user_id"], raw_token)
     summary = get_account_summary(device["user_id"])
@@ -909,7 +935,7 @@ def update_ip_whitelist():
     device_id = request.cookies.get("qc_device_id")
     if not device_id:
         return redirect(url_for("index"))
-    device = get_or_create_device(device_id)
+    device = touch_device(device_id) or get_device(device_id)
     whitelist = request.form.get("ip_whitelist", "").strip()
     conn = get_conn()
     conn.execute("UPDATE users SET api_ip_whitelist = ? WHERE id = ?", (whitelist, device["user_id"]))
@@ -928,7 +954,7 @@ def recover_device_route():
         return redirect(url_for("index"))
     raw_token = request.form.get("recovery_token", "")
     ok, message = recover_device_with_token(device_id, raw_token)
-    current = get_or_create_device(device_id)
+    current = touch_device(device_id) or get_device(device_id)
     if ok and current.get("user_id") and not current.get("pending_approval"):
         return redirect(url_for("index"))
     return render_template("join.html", device=current, error=message if not ok else None, success=message if ok else None)
@@ -1013,7 +1039,7 @@ def approve_device(device_id):
 def add_item():
     raw = request.form.get("content", "")
     device_id = request.cookies.get("qc_device_id")
-    device = get_or_create_device(device_id) if device_id else None
+    device = touch_device(device_id) or get_device(device_id) if device_id else None
     lines = [line.strip() for line in raw.splitlines() if line.strip()]
     added_count = 0
     if lines and device and device.get("user_id"):
@@ -1027,7 +1053,7 @@ def add_item():
             added_count += 1
         conn.commit()
         conn.close()
-    if device and not device.get("user_id"):
+    if not device or not device.get("user_id"):
         return render_template("_capture_result.html", added_count=0)
     # pending 设备提交后只显示等待批准提示
     if device and device.get("pending_approval"):
