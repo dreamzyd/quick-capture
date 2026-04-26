@@ -126,3 +126,11 @@ button[disabled], .secondary-button[aria-disabled="true"], .nav-link[aria-disabl
 .stack-form-row input { width: 100%; }
 .stack-form-row button { width: 100%; }
 .recovery-card .summary-value.small { margin-bottom: 4px; }
+
+.summary-grid { grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+.summary-card.wide-card { grid-column: span 2; }
+.token-stack { display:grid; gap:10px; }
+.token-stack textarea { min-height: 120px; resize: vertical; }
+.token-actions { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+.token-actions .secondary-button { width:auto; }
+@media (max-width: 900px) { .summary-card.wide-card { grid-column: span 1; } }

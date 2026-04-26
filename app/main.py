@@ -113,6 +113,7 @@ def init_db():
     ensure_column(conn, "devices", "pending_approval", "ALTER TABLE devices ADD COLUMN pending_approval INTEGER NOT NULL DEFAULT 0")
     ensure_column(conn, "users", "api_token", "ALTER TABLE users ADD COLUMN api_token TEXT")
     ensure_column(conn, "users", "recovery_token_hash", "ALTER TABLE users ADD COLUMN recovery_token_hash TEXT")
+    ensure_column(conn, "users", "api_ip_whitelist", "ALTER TABLE users ADD COLUMN api_ip_whitelist TEXT")
     conn.execute("UPDATE inbox_items SET user_id = 1 WHERE user_id IS NULL")
     conn.execute("UPDATE users SET approved_at = COALESCE(approved_at, created_at) WHERE approval_status = 'approved'")
     # 清理历史重复 device_id，只保留每个 device_id 最后一条记录
@@ -491,7 +492,7 @@ def join_account_by_code(device_id, join_code):
 
 def get_account_summary(user_id):
     conn = get_conn()
-    user = conn.execute('SELECT id, name, created_at, approval_status, join_code, approved_at, api_token, recovery_token_hash FROM users WHERE id = ?', (user_id,)).fetchone()
+    user = conn.execute('SELECT id, name, created_at, approval_status, join_code, approved_at, api_token, recovery_token_hash, api_ip_whitelist FROM users WHERE id = ?', (user_id,)).fetchone()
     device_count = conn.execute('SELECT COUNT(*) AS c FROM devices WHERE user_id = ?', (user_id,)).fetchone()["c"]
     item_count = conn.execute('SELECT COUNT(*) AS c FROM inbox_items WHERE user_id = ?', (user_id,)).fetchone()["c"]
     trusted_device_count = conn.execute('SELECT COUNT(*) AS c FROM devices WHERE user_id = ? AND trusted = 1', (user_id,)).fetchone()["c"]
