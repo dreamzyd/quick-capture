@@ -107,10 +107,10 @@
           <div class="summary-value small" style="color: var(--muted);">默认关闭</div>
           <div class="item-meta" style="color: var(--muted); margin-top: 8px;">未设置恢复令牌</div>
         {% endif %}
-        <form class="rename-form" action="/me/update-recovery-token" method="post" style="margin-top: 12px;">
-          <div class="inline-form-row">
+        <form class="rename-form recovery-card" action="/me/update-recovery-token" method="post" style="margin-top: 12px;">
+          <div class="stack-form-row">
             <input name="recovery_token" type="password" placeholder="留空并提交表示关闭" maxlength="128" />
-            <button type="submit" class="secondary-button compact">保存 Recovery Token</button>
+            <button type="submit" class="secondary-button">保存 Recovery Token</button>
           </div>
         </form>
         <div class="item-meta" style="margin-top: 8px; font-size: 12px;">

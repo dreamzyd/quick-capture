@@ -120,3 +120,9 @@ button[disabled], .secondary-button[aria-disabled="true"], .nav-link[aria-disabl
 .feedback-success { background: rgba(91, 216, 142, 0.12); border-color: rgba(91, 216, 142, 0.28); color: #b6f3cc; }
 .compact-feedback { margin-top: 10px; margin-bottom: 0; }
 .subtle-empty { padding: 18px 14px; margin-top: 12px; }
+
+
+.stack-form-row { display: flex; flex-direction: column; gap: 10px; align-items: stretch; }
+.stack-form-row input { width: 100%; }
+.stack-form-row button { width: 100%; }
+.recovery-card .summary-value.small { margin-bottom: 4px; }
