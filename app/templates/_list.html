@@ -4,7 +4,7 @@
       <article class="item">
         <div class="item-main">
           <div class="item-content">{{ item.content }}</div>
-          <div class="item-meta">{{ item.created_at[5:16].replace('T', ' ') if item.created_at else '' }}</div>
+          <div class="item-meta">{{ item.created_at|cn_time }}</div>
         </div>
         <div class="item-actions">
                     <button class="danger" hx-post="/delete/{{ item.id }}" hx-target="#inbox-list" hx-swap="innerHTML">删除</button>

@@ -40,8 +40,8 @@
                 <div class="item-meta">device_id: {{ device.device_id }}</div>
                 <div class="item-meta">来源：{{ device.provision_source or 'direct' }}</div>
                 <div class="item-meta">关联记录数：{{ device.item_count }}</div>
-                <div class="item-meta">创建时间：{{ device.created_at or '-' }}</div>
-                <div class="item-meta">最近活跃：{{ device.last_seen_at or '-' }}</div>
+                <div class="item-meta">创建时间：{{ device.created_at|cn_time }}</div>
+                <div class="item-meta">最近活跃：{{ device.last_seen_at|cn_time }}</div>
               </div>
               <div class="item-actions">
                 <span class="status-badge pending">待认领</span>
@@ -76,8 +76,8 @@
                 <div class="item-meta">来源：{{ device.provision_source or 'direct' }}</div>
                 <div class="item-meta">账号 ID：{{ device.user_id }}</div>
                 <div class="item-meta">关联记录数：{{ device.item_count }}</div>
-                <div class="item-meta">创建时间：{{ device.created_at or '-' }}</div>
-                <div class="item-meta">最近活跃：{{ device.last_seen_at or '-' }}</div>
+                <div class="item-meta">创建时间：{{ device.created_at|cn_time }}</div>
+                <div class="item-meta">最近活跃：{{ device.last_seen_at|cn_time }}</div>
               </div>
               <div class="item-actions">
                 <span class="status-badge trusted">已认领</span>

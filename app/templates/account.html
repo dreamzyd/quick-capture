@@ -51,7 +51,7 @@
               <div class="item-meta">device_id: {{ device.device_id }}</div>
               <div class="item-meta">来源：{{ device.provision_source or '-' }}</div>
               <div class="item-meta">关联记录数：{{ device.item_count }}</div>
-              <div class="item-meta">最近活跃：{{ device.last_seen_at or '-' }}</div>
+              <div class="item-meta">最近活跃：{{ device.last_seen_at|cn_time }}</div>
             </div>
             <div class="item-actions">
               <span class="status-badge {% if device.trusted %}trusted{% else %}pending{% endif %}">{{ '已信任' if device.trusted else '待确认' }}</span>

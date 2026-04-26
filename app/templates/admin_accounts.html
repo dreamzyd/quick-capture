@@ -37,7 +37,7 @@
                 <div class="item-meta">设备数：{{ user.device_count }}</div>
                 <div class="item-meta">记录数：{{ user.item_count }}</div>
                 <div class="item-meta">join_code：{{ user.join_code or '-' }}</div>
-                <div class="item-meta">创建时间：{{ user.created_at or '-' }}</div>
+                <div class="item-meta">创建时间：{{ user.created_at|cn_time }}</div>
               </div>
               <div class="item-actions">
                 <span class="status-badge pending">待审批</span>
@@ -63,7 +63,7 @@
                 <div class="item-meta">设备数：{{ user.device_count }}</div>
                 <div class="item-meta">记录数：{{ user.item_count }}</div>
                 <div class="item-meta">join_code：{{ user.join_code or '-' }}</div>
-                <div class="item-meta">开通时间：{{ user.approved_at or '-' }}</div>
+                <div class="item-meta">开通时间：{{ user.approved_at|cn_time }}</div>
               </div>
               <div class="item-actions">
                 <span class="status-badge trusted">已开通</span>

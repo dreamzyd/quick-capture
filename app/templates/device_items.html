@@ -40,7 +40,7 @@
         <article class="summary-card">
           <div class="summary-label">信任状态</div>
           <div class="summary-value small">{{ '已信任' if device.trusted else '待确认' }}</div>
-          <div class="item-meta">最近活跃：{{ device.last_seen_at or '-' }}</div>
+          <div class="item-meta">最近活跃：{{ device.last_seen_at|cn_time }}</div>
         </article>
       </section>
     {% endif %}
@@ -54,7 +54,7 @@
               <div class="item-meta">记录 ID：{{ item.id }}</div>
               <div class="item-meta">账号 ID：{{ item.user_id }}</div>
               <div class="item-meta">来源设备：{{ item.source_device_id or '-' }}</div>
-              <div class="item-meta">创建时间：{{ item.created_at or '-' }}</div>
+              <div class="item-meta">创建时间：{{ item.created_at|cn_time }}</div>
                           </div>
           </article>
         {% endfor %}

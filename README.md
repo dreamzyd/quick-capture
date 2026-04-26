@@ -8,7 +8,7 @@
 - 多设备加入同一个记录组
 - 新建组走管理员批准
 - 新设备加入走组内已批准设备确认
-- `/me` 管理记录组名称、加入码、设备和 API Token
+- `/me` 管理记录组名称、加入码、设备、Recovery Token 和 API Token
 - `/api/records` 支持按 token 拉取记录
 - 支持导出 CSV / JSON
 
@@ -74,7 +74,29 @@ docker compose up -d --build quick-capture
 - 查看加入码
 - 管理当前设备和已批准设备
 - 批准新加入设备
+- 配置 Recovery Token
 - 配置 API Token
+
+### Recovery Token 说明
+
+Recovery Token 是账号级恢复凭证，不是普通加入码。
+
+- 默认关闭
+- 只能由已批准账户自行设置或关闭
+- 留空提交表示关闭
+- 建议离线保存，不要只存在浏览器里
+- 它是清空全部浏览器 Cookie 后，重新找回设备身份的唯一路径
+
+当前规则：
+
+- 长度必须在 `24` 到 `128` 字符之间
+- 必须同时包含字母和数字
+- 只允许字符：`A-Z a-z 0-9 - _ . ~`
+
+### 加入码 vs Recovery Token
+
+- **加入码**：用于把一个新浏览器/新设备提交到现有记录组，提交后默认进入待批准状态
+- **Recovery Token**：用于在已知账号恢复凭证的前提下，直接批准当前浏览器，跳过待批准流程
 
 ### 管理员操作
 
@@ -140,6 +162,23 @@ curl "http://127.0.0.1:18901/api/records?token=YOUR_TOKEN&since=1d"
 
 - 数据库：`data/quick_capture.db`
 - 备份：`data/backups/`
+
+## 开发说明
+
+当前推荐开发方式是**直接在宿主机真仓库里开发**，不要再以其他机器上的副本为主，避免覆盖掉宿主机上更晚的改动。
+
+典型流程：
+
+```bash
+ssh -p 59422 root@172.20.0.1
+cd /root/dev/quick-capture
+git status
+# 修改代码
+docker compose up -d --build quick-capture
+git add .
+git commit -m "your message"
+git push origin HEAD
+```
 
 ## 常用命令
 

@@ -47,7 +47,7 @@
               <div class="item-content">{{ item.content }}</div>
               <div class="item-meta">记录 ID：{{ item.id }}</div>
               <div class="item-meta">来源设备：{{ item.source_device_name or 'Unknown' }} ({{ item.source_device_id or '-' }})</div>
-              <div class="item-meta">创建时间：{{ item.created_at or '-' }}</div>
+              <div class="item-meta">创建时间：{{ item.created_at|cn_time }}</div>
                           </div>
           </article>
         {% endfor %}
