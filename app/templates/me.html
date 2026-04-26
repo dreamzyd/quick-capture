@@ -98,6 +98,33 @@
           <div class="feedback-panel feedback-success compact-feedback">{{ token_success }}</div>
         {% endif %}
       </article>
+      <article class="summary-card">
+        <div class="summary-label">Recovery Token</div>
+        {% if summary.user.recovery_token_hash %}
+          <div class="summary-value small">已启用</div>
+          <div class="item-meta" style="color: var(--success); margin-top: 8px;">设备恢复已开启</div>
+        {% else %}
+          <div class="summary-value small" style="color: var(--muted);">默认关闭</div>
+          <div class="item-meta" style="color: var(--muted); margin-top: 8px;">未设置恢复令牌</div>
+        {% endif %}
+        <form class="rename-form" action="/me/update-recovery-token" method="post" style="margin-top: 12px;">
+          <div class="inline-form-row">
+            <input name="recovery_token" type="password" placeholder="留空并提交表示关闭" maxlength="128" />
+            <button type="submit" class="secondary-button compact">保存 Recovery Token</button>
+          </div>
+        </form>
+        <div class="item-meta" style="margin-top: 8px; font-size: 12px;">
+          <strong>说明：</strong>默认关闭，需由已批准账户自行维护，建议使用高强度随机字符串并离线保存。<br>
+          长度要求 24 到 128 个字符，必须同时包含字母和数字，只允许字母、数字、- _ . ~。<br>
+          <strong style="color: var(--warning);">它是清空全部浏览器 Cookie 后，重新找回设备身份的唯一路径。</strong>
+        </div>
+        {% if recovery_error %}
+          <div class="feedback-panel feedback-error compact-feedback">{{ recovery_error }}</div>
+        {% endif %}
+        {% if recovery_success %}
+          <div class="feedback-panel feedback-success compact-feedback">{{ recovery_success }}</div>
+        {% endif %}
+      </article>
     </section>
 
     <section class="list">
@@ -110,7 +137,7 @@
                 <div class="item-content">{{ device.device_name or 'Unknown' }}</div>
                 <div class="item-meta">device_id: {{ device.device_id }}</div>
                 <div class="item-meta">来源：{{ device.provision_source or '-' }}</div>
-                <div class="item-meta">最近活跃：{{ device.last_seen_at or '-' }}</div>
+                <div class="item-meta">最近活跃：{{ device.last_seen_at|cn_time }}</div>
               </div>
               <div class="item-actions">
                 <span class="status-badge pending">待批准</span>
@@ -142,7 +169,7 @@
               <div class="item-content">{% if current_device_id == device.device_id %}当前设备{% else %}账号内设备{% endif %}</div>
               <div class="item-meta">device_id: {{ device.device_id }}</div>
               <div class="item-meta">来源：{{ device.provision_source or '-' }}</div>
-              <div class="item-meta">最近活跃：{{ device.last_seen_at or '-' }}</div>
+              <div class="item-meta">最近活跃：{{ device.last_seen_at|cn_time }}</div>
             </div>
             <div class="item-actions">
               {% if current_device_id == device.device_id %}

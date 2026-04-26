@@ -6,6 +6,7 @@ import hmac
 import io
 import json
 import os
+import re
 import sqlite3
 import uuid
 
@@ -18,6 +19,10 @@ ADMIN_PASSWORD = os.environ.get("QUICK_CAPTURE_ADMIN_PASSWORD", "")
 ADMIN_COOKIE = "qc_admin"
 
 app = Flask(__name__, template_folder=str(BASE_DIR / "app" / "templates"), static_folder=str(BASE_DIR / "app" / "static"))
+
+RECOVERY_TOKEN_MIN_LENGTH = 24
+RECOVERY_TOKEN_MAX_LENGTH = 128
+RECOVERY_TOKEN_COMPLEXITY_RE = re.compile(r"^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d\-_.~]+$")
 
 
 CN_TZ = timezone(timedelta(hours=8))
@@ -104,6 +109,7 @@ def init_db():
     ensure_column(conn, "devices", "provision_source", "ALTER TABLE devices ADD COLUMN provision_source TEXT NOT NULL DEFAULT 'direct'")
     ensure_column(conn, "devices", "pending_approval", "ALTER TABLE devices ADD COLUMN pending_approval INTEGER NOT NULL DEFAULT 0")
     ensure_column(conn, "users", "api_token", "ALTER TABLE users ADD COLUMN api_token TEXT")
+    ensure_column(conn, "users", "recovery_token_hash", "ALTER TABLE users ADD COLUMN recovery_token_hash TEXT")
     conn.execute("UPDATE inbox_items SET user_id = 1 WHERE user_id IS NULL")
     conn.execute("UPDATE users SET approved_at = COALESCE(approved_at, created_at) WHERE approval_status = 'approved'")
     # 清理历史重复 device_id，只保留每个 device_id 最后一条记录
@@ -148,6 +154,68 @@ def is_admin_view():
 
 def generate_join_code():
     return uuid.uuid4().hex[:12]
+
+
+def hash_token(token):
+    return hashlib.sha256(token.encode("utf-8")).hexdigest()
+
+
+def validate_recovery_token(token):
+    token = (token or "").strip()
+    if not token:
+        return False, "恢复令牌为空，表示该功能未启用。"
+    if len(token) < RECOVERY_TOKEN_MIN_LENGTH or len(token) > RECOVERY_TOKEN_MAX_LENGTH:
+        return False, f"恢复令牌长度需为 {RECOVERY_TOKEN_MIN_LENGTH} 到 {RECOVERY_TOKEN_MAX_LENGTH} 个字符。"
+    if not RECOVERY_TOKEN_COMPLEXITY_RE.match(token):
+        return False, "恢复令牌必须包含字母和数字，只允许字母、数字、- _ . ~。"
+    return True, ""
+
+
+def update_user_recovery_token(user_id, raw_token):
+    token = (raw_token or "").strip()
+    conn = get_conn()
+    row = conn.execute("SELECT id FROM users WHERE id = ?", (user_id,)).fetchone()
+    if not row:
+        conn.close()
+        return False, "用户不存在"
+    if not token:
+        conn.execute("UPDATE users SET recovery_token_hash = NULL WHERE id = ?", (user_id,))
+        conn.commit()
+        conn.close()
+        return True, "恢复令牌已关闭。关闭后，丢失全部浏览器 Cookie 将无法通过恢复令牌找回设备身份。"
+    ok, message = validate_recovery_token(token)
+    if not ok:
+        conn.close()
+        return False, message
+    conn.execute("UPDATE users SET recovery_token_hash = ? WHERE id = ?", (hash_token(token), user_id))
+    conn.commit()
+    conn.close()
+    return True, "恢复令牌已更新。请妥善离线保存，它是清空 Cookie 后重新找回设备身份的唯一路径。"
+
+
+def recover_device_with_token(device_id, raw_token):
+    token = (raw_token or "").strip()
+    if not token:
+        return False, "请输入恢复令牌。"
+    conn = get_conn()
+    device = conn.execute("SELECT user_id, device_name FROM devices WHERE device_id = ?", (device_id,)).fetchone()
+    if not device or not device["user_id"]:
+        conn.close()
+        return False, "当前浏览器还没有可恢复的账号归属，请先通过加入码加入一次。"
+    user = conn.execute("SELECT id, recovery_token_hash FROM users WHERE id = ?", (device["user_id"],)).fetchone()
+    if not user or not user["recovery_token_hash"]:
+        conn.close()
+        return False, "当前账号尚未启用恢复令牌，请先在已批准设备上设置。"
+    if not hmac.compare_digest(hash_token(token), user["recovery_token_hash"]):
+        conn.close()
+        return False, "恢复令牌不正确，无法批准当前浏览器。"
+    conn.execute(
+        "UPDATE devices SET trusted = 1, pending_approval = 0, provision_source = CASE WHEN provision_source = 'join-code' THEN 'recovery-token' ELSE provision_source END, last_seen_at = ? WHERE device_id = ?",
+        (now_local_iso(), device_id),
+    )
+    conn.commit()
+    conn.close()
+    return True, "当前浏览器已通过恢复令牌完成批准，可直接访问该账号记录。"
 
 
 def create_pending_user(conn):
@@ -386,7 +454,7 @@ def join_account_by_code(device_id, join_code):
 
 def get_account_summary(user_id):
     conn = get_conn()
-    user = conn.execute('SELECT id, name, created_at, approval_status, join_code, approved_at, api_token FROM users WHERE id = ?', (user_id,)).fetchone()
+    user = conn.execute('SELECT id, name, created_at, approval_status, join_code, approved_at, api_token, recovery_token_hash FROM users WHERE id = ?', (user_id,)).fetchone()
     device_count = conn.execute('SELECT COUNT(*) AS c FROM devices WHERE user_id = ?', (user_id,)).fetchone()["c"]
     item_count = conn.execute('SELECT COUNT(*) AS c FROM inbox_items WHERE user_id = ?', (user_id,)).fetchone()["c"]
     trusted_device_count = conn.execute('SELECT COUNT(*) AS c FROM devices WHERE user_id = ? AND trusted = 1', (user_id,)).fetchone()["c"]
@@ -757,6 +825,33 @@ def update_token():
     summary = get_account_summary(device["user_id"])
     devices = get_devices(user_id=device["user_id"])
     return render_template("me.html", summary=summary, devices=devices, current_device_id=device_id, is_admin=is_admin_authenticated(), token_error=error if not ok else None, token_success="API Token 已更新" if ok else None)
+
+
+@app.route("/me/update-recovery-token", methods=["POST"])
+def update_recovery_token_route():
+    device_id = request.cookies.get("qc_device_id")
+    if not device_id:
+        return redirect(url_for("index"))
+    device = get_or_create_device(device_id)
+    raw_token = request.form.get("recovery_token", "")
+    ok, message = update_user_recovery_token(device["user_id"], raw_token)
+    summary = get_account_summary(device["user_id"])
+    devices = get_devices(user_id=device["user_id"], pending_approval=False)
+    pending_devices = get_devices(user_id=device["user_id"], pending_approval=True)
+    return render_template("me.html", summary=summary, devices=devices, pending_devices=pending_devices, current_device_id=device_id, is_admin=is_admin_authenticated(), recovery_error=message if not ok else None, recovery_success=message if ok else None)
+
+
+@app.route("/me/recover-device", methods=["POST"])
+def recover_device_route():
+    device_id = request.cookies.get("qc_device_id")
+    if not device_id:
+        return redirect(url_for("index"))
+    raw_token = request.form.get("recovery_token", "")
+    ok, message = recover_device_with_token(device_id, raw_token)
+    current = get_or_create_device(device_id)
+    if ok and current.get("user_id") and not current.get("pending_approval"):
+        return redirect(url_for("index"))
+    return render_template("join.html", device=current, error=message if not ok else None, success=message if ok else None)
 
 
 @app.route("/account")

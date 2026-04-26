@@ -39,6 +39,18 @@
         </div>
       </form>
     </section>
+
+    <section class="capture-box capture-box-focus">
+      <h2 style="margin-top: 0; font-size: 18px;">已有组但当前浏览器在等批准？</h2>
+      <p class="form-tip">如果这个组已经启用了 Recovery Token，你可以直接用它批准当前浏览器。它和加入码不是一回事，它是设备恢复凭证，作用是找回已存在账号下的访问权。</p>
+      <form action="/me/recover-device" method="post" class="submit-once-form">
+        <input type="password" name="recovery_token" placeholder="输入 Recovery Token" required />
+        <p class="form-tip">注意：Recovery Token 默认关闭，需由已批准账户自行维护。它是清空全部浏览器 Cookie 后，找回设备身份的唯一路径。</p>
+        <div class="action-row action-row-focus">
+          <button type="submit" class="secondary-button primary-big" data-loading-text="正在验证...">用 Recovery Token 直接批准</button>
+        </div>
+      </form>
+    </section>
   </main>
   <script src="/static/form-guard.js"></script>
 </body>
