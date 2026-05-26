@@ -59,7 +59,7 @@ button.success { background: var(--success); }
 .summary-value.small { font-size: 20px; }
 .item { display: flex; justify-content: space-between; gap: 12px; padding: 14px; }
 .item-main.grow { flex: 1; }
-.item-content { font-size: 16px; line-height: 1.5; word-break: break-word; }
+.item-content { font-size: 16px; line-height: 1.5; word-break: break-word; white-space: pre-wrap; }
 .item-meta { margin-top: 6px; color: var(--muted); font-size: 12px; word-break: break-all; }
 .item-actions { display: flex; flex-direction: column; gap: 8px; min-width: 160px; align-items: flex-end; }
 .item-actions button { margin-top: 0; padding: 8px 12px; font-size: 14px; width: 100%; }
@@ -89,7 +89,7 @@ button.success { background: var(--success); }
 .subtle-list-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
 .subtle-list-title { color: var(--muted); font-size: 13px; font-weight: 600; }
 .subtle-list-items { list-style: none; padding: 0; margin: 0; }
-.subtle-list-item { color: var(--text); font-size: 14px; line-height: 1.5; padding: 6px 0; border-bottom: 1px solid var(--border); word-break: break-word; }
+.subtle-list-item { color: var(--text); font-size: 14px; line-height: 1.5; padding: 6px 0; border-bottom: 1px solid var(--border); word-break: break-word; white-space: pre-wrap; }
 .subtle-list-item:last-child { border-bottom: none; }
 
 .center-header { text-align: center; }

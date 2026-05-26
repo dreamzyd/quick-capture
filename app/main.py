@@ -1040,19 +1040,18 @@ def add_item():
     raw = request.form.get("content", "")
     device_id = request.cookies.get("qc_device_id")
     device = touch_device(device_id) or get_device(device_id) if device_id else None
-    lines = [line.strip() for line in raw.splitlines() if line.strip()]
+    content = raw.strip()
     added_count = 0
-    if lines and device and device.get("user_id"):
+    if content and device and device.get("user_id"):
         now = now_local_iso()
         conn = get_conn()
-        for content in lines:
-            conn.execute(
-                "INSERT INTO inbox_items (user_id, source_device_id, content, created_at, updated_at) VALUES (?, ?, ?, ?, ?)",
-                (device["user_id"], device_id, content, now, now),
-            )
-            added_count += 1
+        conn.execute(
+            "INSERT INTO inbox_items (user_id, source_device_id, content, created_at, updated_at) VALUES (?, ?, ?, ?, ?)",
+            (device["user_id"], device_id, content, now, now),
+        )
         conn.commit()
         conn.close()
+        added_count = 1
     if not device or not device.get("user_id"):
         return render_template("_capture_result.html", added_count=0)
     # pending 设备提交后只显示等待批准提示
