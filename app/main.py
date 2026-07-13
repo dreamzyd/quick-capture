@@ -972,17 +972,28 @@ def devices_page():
 
 @app.route("/account/items")
 def account_items_page():
-    guard = admin_guard()
-    if guard:
-        return guard
     raw_user_id = request.args.get("user_id")
     if raw_user_id:
-        user_id = int(raw_user_id)
-    else:
-        approved_users = get_users("approved")
-        if not approved_users:
+        guard = admin_guard()
+        if guard:
+            return guard
+        try:
+            user_id = int(raw_user_id)
+        except ValueError:
             return redirect(url_for("admin_accounts_page"))
-        user_id = approved_users[0]["id"]
+    else:
+        device_id = request.cookies.get("qc_device_id")
+        if not device_id:
+            return redirect(url_for("index"))
+        device = touch_device(device_id) or get_device(device_id)
+        if (
+            not device
+            or not device.get("user_id")
+            or device.get("pending_approval")
+            or device.get("approval_status") != "approved"
+        ):
+            return redirect(url_for("index"))
+        user_id = device["user_id"]
     q = request.args.get("q", "").strip()
     user, items = get_account_items(user_id, q if q else None)
     return render_template("account_items.html", user=user, items=items, q=q)

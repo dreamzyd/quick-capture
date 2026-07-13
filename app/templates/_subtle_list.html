@@ -2,7 +2,7 @@
 <div class="subtle-list">
   <div class="subtle-list-header">
     <span class="subtle-list-title">最近记录</span>
-    <a class="subtle-link" href="/me">查看全部 →</a>
+    <a class="subtle-link" href="{{ url_for('account_items_page') }}">查看全部 →</a>
   </div>
   <ul class="subtle-list-items">
     {% for item in items %}
