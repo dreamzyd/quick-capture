@@ -2,32 +2,6 @@
 (function () {
   "use strict";
 
-      };
-      var render = function () {
-        dLines = ["diag qc-pwa " + new Date().toISOString() + "  +" + secs + "s",
-          "protocol=" + location.protocol + "  isSecureContext=" + window.isSecureContext,
-          "standalone=" + isStandalone() + "  SW supported=" + ("serviceWorker" in navigator),
-          "SW controller=" + !!(navigator.serviceWorker && navigator.serviceWorker.controller),
-          "beforeinstallprompt=" + (bipFired ? "FIRED" : "NOT-FIRED-YET"),
-          "已回传服务端: " + sentCount + " 次（请在页面停留 15 秒）",
-          "UA=" + navigator.userAgent];
-        paint();
-      };
-      (document.body || document.documentElement).appendChild(box);
-      window.setInterval(function () { secs = Math.round((Date.now() - t0) / 1000); render(); }, 1000);
-      window.addEventListener("beforeinstallprompt", function () { bipFired = true; send("bip"); render(); });
-      window.addEventListener("appinstalled", function () { send("appinstalled"); render(); });
-      send("load"); render();
-      window.setTimeout(function () { render(); send("t5"); }, 5000);
-      window.setTimeout(function () { render(); send("t15"); }, 15000);
-      if (navigator.serviceWorker && navigator.serviceWorker.getRegistrations) {
-        navigator.serviceWorker.getRegistrations().then(function (rs) {
-          dLines.push("registrations=" + rs.length + " [" + rs.map(function (r) { return r.scope; }).join(", ") + "]");
-          paint();
-        });
-      }
-    }
-  } catch (e) {}
   var tip = document.getElementById("pwa-install-tip");
   var text = document.getElementById("pwa-install-text");
   var btn = document.getElementById("pwa-install-btn");
