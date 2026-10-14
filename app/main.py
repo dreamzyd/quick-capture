@@ -873,8 +873,18 @@ PROBE_LAB = {
 }
 
 
+PROBE_FULL_ICONS = [
+    {"src": "/static/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any"},
+    {"src": "/static/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any"},
+    {"src": "/static/icons/icon-maskable-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable"},
+    {"src": "/static/icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable"},
+    {"src": "/static/icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any"},
+]
+
+
 def probe_build_manifest(vid, spec):
     base = json.loads((BASE_DIR / "app" / "static" / "manifest.json").read_text(encoding="utf-8"))
+    base["icons"] = [dict(i) for i in PROBE_FULL_ICONS]  # 实验基准固定为"旧版 5 图标"，不随线上改动漂移
     if spec.get("drop_maskable"):
         base["icons"] = [i for i in base["icons"] if i.get("purpose") != "maskable"]
     if spec.get("drop_svg"):
