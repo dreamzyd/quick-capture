@@ -2,23 +2,6 @@
 (function () {
   "use strict";
 
-  // 诊断模式（临时，定位完删除）：?diag=1 → 顶部显示判据，并把结果回传服务端 /pwa-diag
-  try {
-    if (/[?&]diag=1/.test(window.location.search)) {
-      var bipFired = false, sentCount = 0, t0 = Date.now(), secs = 0, dLines = [];
-      var box = document.createElement("pre");
-      box.style.cssText = "position:fixed;left:0;right:0;top:0;z-index:2147483647;margin:0;padding:8px;" +
-        "background:#000;color:#0f0;font:12px/1.5 monospace;white-space:pre-wrap;max-height:60vh;overflow:auto";
-      var paint = function () { box.textContent = dLines.join("\n"); };
-      var snap = function (why) {
-        return { why: why, url: location.href, secs: secs, secure: window.isSecureContext,
-          standalone: isStandalone(), sw: ("serviceWorker" in navigator),
-          ctl: !!(navigator.serviceWorker && navigator.serviceWorker.controller),
-          bip: bipFired, ua: navigator.userAgent, vis: document.visibilityState };
-      };
-      var send = function (why) {
-        sentCount++;
-        try { fetch("/pwa-diag", { method: "POST", body: JSON.stringify(snap(why)), keepalive: true }); } catch (e) {}
       };
       var render = function () {
         dLines = ["diag qc-pwa " + new Date().toISOString() + "  +" + secs + "s",
