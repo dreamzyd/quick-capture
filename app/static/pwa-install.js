@@ -2,26 +2,41 @@
 (function () {
   "use strict";
 
-  // 诊断模式（临时排查用）：URL 带 ?diag=1 → 页面顶部显示关键判据。定位真机"没有安装入口"后可删。
+  // 诊断模式（临时，定位完删除）：?diag=1 → 顶部显示判据，并把结果回传服务端 /pwa-diag
   try {
     if (/[?&]diag=1/.test(window.location.search)) {
-      var dLines = [];
+      var bipFired = false, sentCount = 0, t0 = Date.now(), secs = 0, dLines = [];
       var box = document.createElement("pre");
       box.style.cssText = "position:fixed;left:0;right:0;top:0;z-index:2147483647;margin:0;padding:8px;" +
         "background:#000;color:#0f0;font:12px/1.5 monospace;white-space:pre-wrap;max-height:60vh;overflow:auto";
       var paint = function () { box.textContent = dLines.join("\n"); };
-      dLines.push("diag qc-pwa " + new Date().toISOString());
-      dLines.push("protocol=" + location.protocol + " isSecureContext=" + window.isSecureContext);
-      dLines.push("standalone=" + isStandalone());
-      dLines.push("SW supported=" + ("serviceWorker" in navigator) + " SW controller=" + !!(navigator.serviceWorker && navigator.serviceWorker.controller));
-      dLines.push("beforeinstallprompt=NOT-FIRED-YET");
-      dLines.push("UA=" + navigator.userAgent);
-      (document.body || document.documentElement).appendChild(box);
-      paint();
-      window.addEventListener("beforeinstallprompt", function () {
-        dLines[4] = "beforeinstallprompt=FIRED(浏览器认为可安装)";
+      var snap = function (why) {
+        return { why: why, url: location.href, secs: secs, secure: window.isSecureContext,
+          standalone: isStandalone(), sw: ("serviceWorker" in navigator),
+          ctl: !!(navigator.serviceWorker && navigator.serviceWorker.controller),
+          bip: bipFired, ua: navigator.userAgent, vis: document.visibilityState };
+      };
+      var send = function (why) {
+        sentCount++;
+        try { fetch("/pwa-diag", { method: "POST", body: JSON.stringify(snap(why)), keepalive: true }); } catch (e) {}
+      };
+      var render = function () {
+        dLines = ["diag qc-pwa " + new Date().toISOString() + "  +" + secs + "s",
+          "protocol=" + location.protocol + "  isSecureContext=" + window.isSecureContext,
+          "standalone=" + isStandalone() + "  SW supported=" + ("serviceWorker" in navigator),
+          "SW controller=" + !!(navigator.serviceWorker && navigator.serviceWorker.controller),
+          "beforeinstallprompt=" + (bipFired ? "FIRED" : "NOT-FIRED-YET"),
+          "已回传服务端: " + sentCount + " 次（请在页面停留 15 秒）",
+          "UA=" + navigator.userAgent];
         paint();
-      });
+      };
+      (document.body || document.documentElement).appendChild(box);
+      window.setInterval(function () { secs = Math.round((Date.now() - t0) / 1000); render(); }, 1000);
+      window.addEventListener("beforeinstallprompt", function () { bipFired = true; send("bip"); render(); });
+      window.addEventListener("appinstalled", function () { send("appinstalled"); render(); });
+      send("load"); render();
+      window.setTimeout(function () { render(); send("t5"); }, 5000);
+      window.setTimeout(function () { render(); send("t15"); }, 15000);
       if (navigator.serviceWorker && navigator.serviceWorker.getRegistrations) {
         navigator.serviceWorker.getRegistrations().then(function (rs) {
           dLines.push("registrations=" + rs.length + " [" + rs.map(function (r) { return r.scope; }).join(", ") + "]");

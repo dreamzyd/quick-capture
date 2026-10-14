@@ -5,3 +5,6 @@ quick_capture.db
 data/quick_capture.db
 
 TODO.md
+
+# 临时诊断日志（定位完删除）
+pwa-diag.log*

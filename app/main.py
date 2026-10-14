@@ -24,6 +24,68 @@ app = Flask(__name__, template_folder=str(BASE_DIR / "app" / "templates"), stati
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_port=1)
 
 RECOVERY_TOKEN_MIN_LENGTH = 24
+
+DIAG_TOKEN = "qc-diag-7f3a91"
+DIAG_LOG = BASE_DIR / "pwa-diag.log"
+DIAG_LOG_LIMIT = 400
+
+
+def diag_append(record):
+    """临时诊断记录（定位完删除）：只记录白名单路径 + MiuiBrowser UA。"""
+    try:
+        if DIAG_LOG.exists() and DIAG_LOG.stat().st_size > 512 * 1024:
+            DIAG_LOG.replace(DIAG_LOG.with_name("pwa-diag.log.1"))
+        with DIAG_LOG.open("a", encoding="utf-8") as fh:
+            fh.write(json.dumps(record, ensure_ascii=False) + "\n")
+    except Exception:
+        pass
+
+
+@app.before_request
+def diag_log_request():
+    try:
+        path = request.path
+        ua = request.headers.get("User-Agent", "")
+        if "MiuiBrowser" not in ua:
+            return
+        if path not in ("/", "/manifest.json", "/service-worker.js", "/pwa-probe", "/pwa-probe.webmanifest") and not path.startswith("/static/"):
+            return
+        diag_append({
+            "t": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "kind": "req",
+            "path": path,
+            "q": request.query_string.decode("utf-8", "ignore")[:120],
+            "ref": (request.headers.get("Referer") or "")[:160],
+        })
+    except Exception:
+        pass
+
+
+@app.route("/pwa-diag", methods=["POST"])
+def pwa_diag_post():
+    try:
+        raw = request.get_data(as_text=True)[:2000]
+    except Exception:
+        raw = ""
+    diag_append({
+        "t": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "kind": "client",
+        "ua": (request.headers.get("User-Agent") or "")[:200],
+        "data": raw,
+    })
+    return ("", 204)
+
+
+@app.route("/pwa-diag/list")
+def pwa_diag_list():
+    if request.args.get("k") != DIAG_TOKEN:
+        return ("not found", 404)
+    if not DIAG_LOG.exists():
+        return ("(empty)\n", 200, {"Content-Type": "text/plain; charset=utf-8"})
+    lines = DIAG_LOG.read_text(encoding="utf-8", errors="ignore").splitlines()[-DIAG_LOG_LIMIT:]
+    return ("\n".join(lines) + "\n", 200, {"Content-Type": "text/plain; charset=utf-8"})
+
+
 RECOVERY_TOKEN_MAX_LENGTH = 128
 RECOVERY_TOKEN_COMPLEXITY_RE = re.compile(r"^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d\-_.~]+$")
 
@@ -757,7 +819,10 @@ L.push("SW controller=" + !!(navigator.serviceWorker && navigator.serviceWorker.
 L.push("beforeinstallprompt=NOT-FIRED-YET");
 L.push("UA=" + navigator.userAgent);
 paint();
-window.addEventListener("beforeinstallprompt", function () { L[4] = "beforeinstallprompt=FIRED"; paint(); });
+function snd(w) { try { fetch("/pwa-diag", { method: "POST", keepalive: true, body: JSON.stringify({ why: "probe-" + w, url: location.href, secure: window.isSecureContext, sw: ("serviceWorker" in navigator), ctl: !!(navigator.serviceWorker && navigator.serviceWorker.controller), bip: (w === "bip"), ua: navigator.userAgent }) }); } catch (e) {} }
+snd("load");
+window.setTimeout(function () { snd("t5"); }, 5000);
+window.addEventListener("beforeinstallprompt", function () { L[4] = "beforeinstallprompt=FIRED"; paint(); snd("bip"); });
 </script>
 </body>
 </html>
