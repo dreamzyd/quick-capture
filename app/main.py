@@ -1149,5 +1149,28 @@ def export_json():
     )
 
 
+COLLECT_LOG = BASE_DIR / "pwa-collect.log"
+COLLECT_KEY = "qc-collect-kb4"
+
+
+@app.route("/pwa-collect", methods=["POST"])
+def pwa_collect():
+    """临时：收集夜莺侧 PWA 自报（定位完连同该接口一起删除）"""
+    raw = request.get_data(as_text=True)[:2000].replace("\n", " ")
+    with COLLECT_LOG.open("a", encoding="utf-8") as fh:
+        fh.write(raw + "\n")
+    return ("", 204)
+
+
+@app.route("/pwa-collect/list")
+def pwa_collect_list():
+    if request.args.get("k") != COLLECT_KEY:
+        return ("not found", 404)
+    if not COLLECT_LOG.exists():
+        return ("(empty)\n", 200, {"Content-Type": "text/plain; charset=utf-8"})
+    lines = COLLECT_LOG.read_text(encoding="utf-8", errors="ignore").splitlines()[-200:]
+    return ("\n".join(lines) + "\n", 200, {"Content-Type": "text/plain; charset=utf-8"})
+
+
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=18901, debug=False)
