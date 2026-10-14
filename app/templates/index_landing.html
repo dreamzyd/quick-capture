@@ -6,8 +6,11 @@
   <meta name="theme-color" content="#0f1115" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <link rel="manifest" href="/manifest.json" />
-  <link rel="apple-touch-icon" href="/static/icons/apple-touch-icon.png" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="记一下" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/static/icons/favicon-32.png?v=20261014-pwa" />
+  <link rel="manifest" href="/manifest.json?v=20261014-pwa" />
+  <link rel="apple-touch-icon" href="/static/icons/apple-touch-icon.png?v=20261014-pwa" />
   <title>记一下</title>
   <link rel="stylesheet" href="/static/style.css" />
 </head>
@@ -26,6 +29,10 @@
       </div>
       <p class="hint landing-hint">新建组需要管理员批准，加入组需要组内设备批准。一个组内的设备会共享同一份记录。</p>
     </section>
+    <section id="pwa-install-tip" class="hint-block" style="display:none; margin-top: -4px; margin-bottom: 16px;">
+      <span id="pwa-install-text">把“记一下”装到手机桌面，打开更快、更像 App。</span>
+      <button type="button" id="pwa-install-btn" class="subtle-link" style="display:none; margin-left: 8px; background: none; border: 0; padding: 0; color: inherit; font: inherit; text-decoration: underline; cursor: pointer;">立即安装</button>
+    </section>
   </main>
   <script>
     if ("serviceWorker" in navigator) {
@@ -36,5 +43,6 @@
       });
     }
   </script>
+  <script src="/static/pwa-install.js"></script>
 </body>
 </html>

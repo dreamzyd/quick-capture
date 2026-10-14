@@ -6,8 +6,11 @@
   <meta name="theme-color" content="#0f1115" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <link rel="manifest" href="/manifest.json" />
-  <link rel="apple-touch-icon" href="/static/icons/apple-touch-icon.png" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="记一下" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/static/icons/favicon-32.png?v=20261014-pwa" />
+  <link rel="manifest" href="/manifest.json?v=20261014-pwa" />
+  <link rel="apple-touch-icon" href="/static/icons/apple-touch-icon.png?v=20261014-pwa" />
   <title>记一下</title>
   <script src="https://unpkg.com/htmx.org@1.9.12"></script>
   <link rel="stylesheet" href="/static/style.css" />
@@ -69,7 +72,7 @@
       {% endif %}
     </section>
 
-    <section id="pwa-install-tip" class="hint-block" style="display:none; margin-top: -4px; margin-bottom: 16px;">如果你在安卓 Chrome 里打开，可以从浏览器菜单选择“添加到主屏幕”或“安装应用”，以后会更像独立 App。</section>
+    <section id="pwa-install-tip" class="hint-block" style="display:none; margin-top: -4px; margin-bottom: 16px;"><span id="pwa-install-text">把“记一下”装到手机桌面，打开更快、更像 App。</span><button type="button" id="pwa-install-btn" class="subtle-link" style="display:none; margin-left: 8px; background: none; border: 0; padding: 0; color: inherit; font: inherit; text-decoration: underline; cursor: pointer;">立即安装</button></section>
 
     <section class="quick-links">
       <a class="subtle-link" href="/join">让新设备加入这个记录组</a>
@@ -78,10 +81,6 @@
 
   <script>
     const input = document.getElementById('capture-input');
-    const installTip = document.getElementById('pwa-install-tip');
-    if (window.matchMedia && !window.matchMedia('(display-mode: standalone)').matches && /Android/i.test(navigator.userAgent)) {
-      installTip.style.display = "block";
-    }
     input.addEventListener('keydown', function (e) {
       if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
         e.preventDefault();
@@ -98,5 +97,6 @@
       });
     }
   </script>
+  <script src="/static/pwa-install.js"></script>
 </body>
 </html>

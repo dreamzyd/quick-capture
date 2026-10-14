@@ -199,3 +199,27 @@ docker compose logs -f quick-capture
 ```bash
 docker compose stop quick-capture
 ```
+
+## 手机安装（PWA）
+
+> 前提：**必须通过 HTTPS 访问**（或本机 `localhost`）。用 `http://<局域网IP>:18901` 打开时，浏览器会拒绝注册 Service Worker，也不会出现「安装应用 / 添加到主屏幕」，这是浏览器的安全策略，不是应用的问题。
+
+**Android（Chrome / Edge）**：打开站点 → 页面出现「立即安装」按钮时点它；或浏览器菜单 → 「安装应用 / 添加到主屏幕」。
+
+**iPhone / iPad（Safari）**：必须用 Safari 打开 → 底部分享按钮 → 「添加到主屏幕」→ 名称保留「记一下」。iOS 不提供 `beforeinstallprompt`，页面会显示一次性引导。
+
+装好后以 `standalone` 模式打开（无地址栏），页面会自动适配状态栏/刘海安全区。
+
+### 需要一个 HTTPS 入口
+
+仓库本身只提供 HTTP（`docker-compose` 暴露 `18901`）。常见做法（任选其一，均在应用之外完成）：
+
+- 反向代理 + 证书：Nginx / Caddy 反代到 `127.0.0.1:18901`，例如 Caddy 一行 `qc.example.com { reverse_proxy 127.0.0.1:18901 }` 自动签发证书；
+- Tunnel：Cloudflare Tunnel / Tailscale Funnel 把本地端口映射到 HTTPS 域名；
+- 已有网关：若服务器上已有 HTTPS 网关，把 `/` 路由到 `18901` 即可。
+
+### 验收要点
+
+- Chrome DevTools → Application：Manifest 无错误、Service Worker 状态 `activated and is running`；
+- Lighthouse → PWA：可安装（installable）通过；
+- 手机：桌面出现图标，点开无地址栏，离线时至少首页不白屏。

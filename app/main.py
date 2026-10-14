@@ -726,7 +726,12 @@ def manifest():
 
 @app.route("/service-worker.js")
 def service_worker():
-    return send_from_directory(str(BASE_DIR / "app" / "static"), "service-worker.js", mimetype="application/javascript")
+    # 让浏览器每次都校验 SW 脚本，避免更新滞后；同时显式声明作用域为站点根
+    body = (BASE_DIR / "app" / "static" / "service-worker.js").read_text(encoding="utf-8")
+    resp = app.response_class(body, mimetype="application/javascript")
+    resp.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    resp.headers["Service-Worker-Allowed"] = "/"
+    return resp
 
 
 @app.route("/")
