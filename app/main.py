@@ -25,6 +25,19 @@ app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_port=1)
 
 RECOVERY_TOKEN_MIN_LENGTH = 24
 
+@app.after_request
+def add_html_no_store(resp):
+    """HTML 一律不缓存：避免手机端拿到旧 head（对齐已知可安装站的响应头）。"""
+    try:
+        if resp.mimetype == "text/html" and "Cache-Control" not in resp.headers:
+            resp.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+            resp.headers["Pragma"] = "no-cache"
+    except Exception:
+        pass
+    return resp
+
+
+
 DIAG_TOKEN = "qc-diag-7f3a91"
 DIAG_LOG = BASE_DIR / "pwa-diag.log"
 DIAG_LOG_LIMIT = 400
@@ -784,6 +797,7 @@ init_db()
 
 
 @app.route("/manifest.json")
+@app.route("/manifest.webmanifest")
 def manifest():
     return send_from_directory(str(BASE_DIR / "app" / "static"), "manifest.json", mimetype="application/manifest+json")
 

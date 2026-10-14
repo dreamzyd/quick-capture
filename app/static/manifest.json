@@ -3,14 +3,12 @@
   "name": "记一下",
   "short_name": "记一下",
   "lang": "zh-CN",
-  "dir": "ltr",
   "start_url": "/?source=pwa",
   "scope": "/",
   "display": "standalone",
   "background_color": "#0f1115",
   "theme_color": "#0f1115",
   "description": "极低摩擦的杂事收集工具，先记下来，别打断自己。",
-  "prefer_related_applications": false,
   "icons": [
     {
       "src": "/static/icons/icon-192.png",
@@ -35,6 +33,12 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
+    },
+    {
+      "src": "/static/icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
     }
   ]
 }
