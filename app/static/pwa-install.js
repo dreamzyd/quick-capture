@@ -1,6 +1,35 @@
 // quick-capture PWA 安装引导（2026-10-14 v2: 增加"拿不到浏览器安装事件"时的兜底指引）
 (function () {
   "use strict";
+
+  // 诊断模式（临时排查用）：URL 带 ?diag=1 → 页面顶部显示关键判据。定位真机"没有安装入口"后可删。
+  try {
+    if (/[?&]diag=1/.test(window.location.search)) {
+      var dLines = [];
+      var box = document.createElement("pre");
+      box.style.cssText = "position:fixed;left:0;right:0;top:0;z-index:2147483647;margin:0;padding:8px;" +
+        "background:#000;color:#0f0;font:12px/1.5 monospace;white-space:pre-wrap;max-height:60vh;overflow:auto";
+      var paint = function () { box.textContent = dLines.join("\n"); };
+      dLines.push("diag qc-pwa " + new Date().toISOString());
+      dLines.push("protocol=" + location.protocol + " isSecureContext=" + window.isSecureContext);
+      dLines.push("standalone=" + isStandalone());
+      dLines.push("SW supported=" + ("serviceWorker" in navigator) + " SW controller=" + !!(navigator.serviceWorker && navigator.serviceWorker.controller));
+      dLines.push("beforeinstallprompt=NOT-FIRED-YET");
+      dLines.push("UA=" + navigator.userAgent);
+      (document.body || document.documentElement).appendChild(box);
+      paint();
+      window.addEventListener("beforeinstallprompt", function () {
+        dLines[4] = "beforeinstallprompt=FIRED(浏览器认为可安装)";
+        paint();
+      });
+      if (navigator.serviceWorker && navigator.serviceWorker.getRegistrations) {
+        navigator.serviceWorker.getRegistrations().then(function (rs) {
+          dLines.push("registrations=" + rs.length + " [" + rs.map(function (r) { return r.scope; }).join(", ") + "]");
+          paint();
+        });
+      }
+    }
+  } catch (e) {}
   var tip = document.getElementById("pwa-install-tip");
   var text = document.getElementById("pwa-install-text");
   var btn = document.getElementById("pwa-install-btn");
