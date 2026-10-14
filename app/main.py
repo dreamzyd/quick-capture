@@ -1172,5 +1172,16 @@ def pwa_collect_list():
     return ("\n".join(lines) + "\n", 200, {"Content-Type": "text/plain; charset=utf-8"})
 
 
+@app.route("/pwa-collect.gif")
+def pwa_collect_gif():
+    """临时：1x1 像素信标（HTML 静态引用，无需 JS/CORS），参数记入同一日志"""
+    with COLLECT_LOG.open("a", encoding="utf-8") as fh:
+        fh.write("BEACON ua=" + (request.headers.get("User-Agent") or "")[:160]
+                 + " " + request.query_string.decode("utf-8", "ignore")[:300] + "\n")
+    return Response(b"GIF89a\x01\x00\x01\x00\x80\x00\x00\x00\x00\x00\xff\xff\xff!"
+                    b"\xf9\x04\x01\x00\x00\x00\x00,\x00\x00\x00\x00\x01\x00\x01\x00"
+                    b"\x00\x02\x02D\x01\x00;", mimetype="image/gif")
+
+
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=18901, debug=False)
