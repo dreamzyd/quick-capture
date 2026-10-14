@@ -870,6 +870,7 @@ PROBE_LAB = {
     "v6": {"label": "对照 manifest + 应用页的那些 meta 头", "control": True, "metas": True},
     "v7": {"label": "去掉两个 maskable 图标（保留 svg）", "drop_maskable": True, "iso_scope": True},
     "v8": {"label": "去掉 SVG 图标（保留两个 maskable）", "drop_svg": True, "iso_scope": True},
+    "v11": {"label": "镜像主页(同内容) + 新身份 id=/qc-app", "id_only": "/qc-app", "icons_min": True},
 }
 
 
@@ -887,9 +888,33 @@ PROBE_FULL_ICONS = [
 ]
 
 
+@app.route("/probe/v11")
+@app.route("/probe/v12")
+def probe_mirror():
+    is_v11 = request.path.endswith("v11")
+    swap = ('href="/manifest.webmanifest?v=20261014-pwa6"', 'href="/probe/v11.webmanifest"') if is_v11 else None
+    js = "t = t.replace(%r, %r);" % swap if swap else ""
+    page = """<!doctype html><html lang="zh-CN"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1"><title>镜像页</title></head><body>
+<p style="font-family:sans-serif;margin:16px">正在载入镜像页…</p>
+<script>
+fetch("/?_mirror=1&_n=" + Date.now(), {cache: "no-store"}).then(function (r) { return r.text(); }).then(function (t) {
+  %s
+  document.open(); document.write(t); document.close();
+}).catch(function (e) { document.body.innerHTML = "载入失败: " + e; });
+</script></body></html>""" % js
+    return Response(page, mimetype="text/html", headers={"Cache-Control": "no-store, no-cache, must-revalidate, max-age=0"})
+
+
 def probe_build_manifest(vid, spec):
     base = json.loads((BASE_DIR / "app" / "static" / "manifest.json").read_text(encoding="utf-8"))
     base["icons"] = [dict(i) for i in PROBE_FULL_ICONS]  # 实验基准固定为"旧版 5 图标"，不随线上改动漂移
+    if spec.get("id_only"):
+        base["id"] = spec["id_only"]
+        base["scope"] = "/"
+        base["start_url"] = "/?source=pwa"
+    if spec.get("icons_min"):
+        base["icons"] = base["icons"][:2]
     if spec.get("drop_maskable"):
         base["icons"] = [i for i in base["icons"] if i.get("purpose") != "maskable"]
     if spec.get("drop_svg"):
