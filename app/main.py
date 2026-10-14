@@ -868,6 +868,8 @@ PROBE_LAB = {
     "v4": {"label": "id/start_url/scope 改成探针自己的值", "iso_scope": True},
     "v5": {"label": "对照：探针 manifest（已知能触发的那种）", "control": True},
     "v6": {"label": "对照 manifest + 应用页的那些 meta 头", "control": True, "metas": True},
+    "v7": {"label": "去掉两个 maskable 图标（保留 svg）", "drop_maskable": True, "iso_scope": True},
+    "v8": {"label": "去掉 SVG 图标（保留两个 maskable）", "drop_svg": True, "iso_scope": True},
 }
 
 
