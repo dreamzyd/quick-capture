@@ -734,6 +734,62 @@ def service_worker():
     return resp
 
 
+PWA_PROBE_HTML = """<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="manifest" href="/pwa-probe.webmanifest" />
+<title>PWA 探针</title>
+<style>body{font:16px/1.6 system-ui,sans-serif;margin:16px;background:#0f1115;color:#e6e6e6}pre{color:#7ef;white-space:pre-wrap}</style>
+</head>
+<body>
+<h1>PWA 探针</h1>
+<p>同域名的极简页：不注册 Service Worker、只挂一个最小 manifest。<b>请看浏览器菜单里有没有「安装应用」。</b></p>
+<pre id="out">检测中…</pre>
+<script>
+var L = [];
+function paint() { document.getElementById("out").textContent = L.join("\n"); }
+L.push("protocol=" + location.protocol + "  isSecureContext=" + window.isSecureContext);
+L.push("standalone=" + window.matchMedia("(display-mode: standalone)").matches);
+L.push("SW supported=" + ("serviceWorker" in navigator));
+L.push("SW controller=" + !!(navigator.serviceWorker && navigator.serviceWorker.controller));
+L.push("beforeinstallprompt=NOT-FIRED-YET");
+L.push("UA=" + navigator.userAgent);
+paint();
+window.addEventListener("beforeinstallprompt", function () { L[4] = "beforeinstallprompt=FIRED"; paint(); });
+</script>
+</body>
+</html>
+"""
+
+PWA_PROBE_MANIFEST = {
+    "id": "/pwa-probe",
+    "name": "记一下\u00b7探针",
+    "short_name": "探针",
+    "lang": "zh-CN",
+    "start_url": "/pwa-probe",
+    "scope": "/pwa-probe",
+    "display": "standalone",
+    "background_color": "#0f1115",
+    "theme_color": "#0f1115",
+    "icons": [
+        {"src": "/static/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any"},
+        {"src": "/static/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any"},
+    ],
+}
+
+
+@app.route("/pwa-probe")
+def pwa_probe():
+    return Response(PWA_PROBE_HTML, mimetype="text/html; charset=utf-8")
+
+
+@app.route("/pwa-probe.webmanifest")
+def pwa_probe_manifest():
+    return Response(json.dumps(PWA_PROBE_MANIFEST, ensure_ascii=False), mimetype="application/manifest+json")
+
+
 @app.route("/")
 def index():
     device_id = request.cookies.get("qc_device_id")
