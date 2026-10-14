@@ -1,4 +1,4 @@
-const CACHE_NAME = "quick-capture-v4";
+const CACHE_NAME = "quick-capture-v5";
 const PRECACHE = [
   "/",
   "/static/style.css",
@@ -53,8 +53,14 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // 静态资源 / manifest：缓存优先，同时后台刷新
-  if (url.pathname.startsWith("/static/") || url.pathname === "/manifest.json") {
+  // manifest 与图标：永远走网络、不落缓存 —— 避免"服务端已修好、手机仍拿旧 manifest/旧图标"导致判定不可安装
+  if (url.pathname === "/manifest.json" || url.pathname.startsWith("/static/icons/")) {
+    event.respondWith(fetch(event.request));
+    return;
+  }
+
+  // 其它静态资源：缓存优先，同时后台刷新
+  if (url.pathname.startsWith("/static/")) {
     event.respondWith(
       caches.match(event.request).then((cached) => {
         const network = fetch(event.request)
