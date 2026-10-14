@@ -55,6 +55,8 @@ def diag_log_request():
             "kind": "req",
             "path": path,
             "q": request.query_string.decode("utf-8", "ignore")[:120],
+            "ua": ua[-70:],
+            "ip": (request.headers.get("X-Forwarded-For") or request.remote_addr or "")[:60],
             "ref": (request.headers.get("Referer") or "")[:160],
         })
     except Exception:
