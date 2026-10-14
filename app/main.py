@@ -873,6 +873,11 @@ PROBE_LAB = {
 }
 
 
+PROBE_LAB.update({
+    "v9": {"label": "v6 对照，仅应用标识与启动范围改为主页", "control": True, "metas": True, "root_identity": True},
+    "v10": {"label": "v6 对照，仅加入主页安装引导脚本", "control": True, "metas": True, "install_script": True},
+})
+
 PROBE_FULL_ICONS = [
     {"src": "/static/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any"},
     {"src": "/static/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any"},
@@ -895,6 +900,10 @@ def probe_build_manifest(vid, spec):
         base["id"] = "/probe/" + vid
         base["start_url"] = "/probe/" + vid
         base["scope"] = "/probe/" + vid
+    if spec.get("root_identity"):
+        base["id"] = "/"
+        base["start_url"] = "/?source=pwa"
+        base["scope"] = "/"
     return base
 
 
@@ -921,6 +930,8 @@ def probe_build_page(vid, spec):
         'window.addEventListener("beforeinstallprompt", function () { b = true; L[1] = "bip=FIRED"; P(); S("bip"); });\n'
         '</script>'
     )
+    if spec.get("install_script"):
+        script += '<script src="/static/pwa-install.js?v=20261014-pwa6"></script>'
     return (
         '<!doctype html><html lang="zh-CN"><head><meta charset="utf-8" />'
         '<meta name="viewport" content="width=device-width, initial-scale=1" />'
