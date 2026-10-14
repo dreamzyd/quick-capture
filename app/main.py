@@ -61,7 +61,7 @@ def diag_log_request():
         ua = request.headers.get("User-Agent", "")
         if "MiuiBrowser" not in ua:
             return
-        if path not in ("/", "/manifest.json", "/service-worker.js", "/pwa-probe", "/pwa-probe.webmanifest") and not path.startswith("/static/"):
+        if path not in ("/", "/manifest.json", "/manifest.webmanifest", "/service-worker.js", "/pwa-probe", "/pwa-probe.webmanifest") and not path.startswith(("/static/", "/probe")):
             return
         diag_append({
             "t": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
@@ -859,6 +859,97 @@ PWA_PROBE_MANIFEST = {
         {"src": "/static/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any"},
     ],
 }
+
+
+PROBE_LAB = {
+    "v1": {"label": "应用页 manifest 原样（5 个图标，含 maskable + svg）"},
+    "v2": {"label": "去掉 maskable 图标", "drop_maskable": True},
+    "v3": {"label": "去掉 SVG 图标", "drop_svg": True},
+    "v4": {"label": "id/start_url/scope 改成探针自己的值", "iso_scope": True},
+    "v5": {"label": "对照：探针 manifest（已知能触发的那种）", "control": True},
+    "v6": {"label": "对照 manifest + 应用页的那些 meta 头", "control": True, "metas": True},
+}
+
+
+def probe_build_manifest(vid, spec):
+    base = json.loads((BASE_DIR / "app" / "static" / "manifest.json").read_text(encoding="utf-8"))
+    if spec.get("drop_maskable"):
+        base["icons"] = [i for i in base["icons"] if i.get("purpose") != "maskable"]
+    if spec.get("drop_svg"):
+        base["icons"] = [i for i in base["icons"] if not i["src"].endswith(".svg")]
+    if spec.get("control"):
+        base["icons"] = [i for i in base["icons"] if i["src"] in ("/static/icons/icon-192.png", "/static/icons/icon-512.png")]
+    if spec.get("control") or spec.get("iso_scope"):
+        base["id"] = "/probe/" + vid
+        base["start_url"] = "/probe/" + vid
+        base["scope"] = "/probe/" + vid
+    return base
+
+
+def probe_build_page(vid, spec):
+    metas = ""
+    if spec.get("metas"):
+        metas = (
+            '<meta name="theme-color" content="#0f1115" />\n'
+            '<meta name="apple-mobile-web-app-capable" content="yes" />\n'
+            '<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />\n'
+            '<meta name="mobile-web-app-capable" content="yes" />\n'
+            '<meta name="apple-mobile-web-app-title" content="记一下" />\n'
+            '<link rel="icon" type="image/png" sizes="32x32" href="/static/icons/favicon-32.png" />\n'
+            '<link rel="icon" type="image/svg+xml" href="/static/icons/icon.svg" />\n'
+            '<link rel="apple-touch-icon" href="/static/icons/apple-touch-icon.png" />\n'
+        )
+    script = (
+        '<script>var L = [], b = false;\n'
+        'function P() { document.getElementById("out").textContent = L.join("\\n"); }\n'
+        'function S(w) { try { fetch("/pwa-diag", { method: "POST", keepalive: true, body: JSON.stringify({ why: "' + vid + '-" + w, url: location.href, secure: window.isSecureContext, bip: b, ua: navigator.userAgent }) }); } catch (e) {} }\n'
+        'L.push("secure=" + window.isSecureContext, "bip=" + b, location.href); P(); S("load");\n'
+        'window.setTimeout(function () { S("t5"); }, 5000);\n'
+        'window.setTimeout(function () { S("t15"); }, 15000);\n'
+        'window.addEventListener("beforeinstallprompt", function () { b = true; L[1] = "bip=FIRED"; P(); S("bip"); });\n'
+        '</script>'
+    )
+    return (
+        '<!doctype html><html lang="zh-CN"><head><meta charset="utf-8" />'
+        '<meta name="viewport" content="width=device-width, initial-scale=1" />'
+        + metas
+        + '<link rel="manifest" href="/probe/' + vid + '.webmanifest" />'
+        '<title>探针 ' + vid + '</title>'
+        '<style>body{font:16px/1.6 system-ui,sans-serif;margin:16px;background:#0f1115;color:#e6e6e6}pre{color:#7ef;white-space:pre-wrap}</style>'
+        '</head><body><h1>探针 ' + vid + '</h1><p>' + spec["label"] + '</p><pre id="out">…</pre>'
+        + script + '</body></html>'
+    )
+
+
+@app.route("/probe")
+def probe_lab_index():
+    rows = "".join(
+        '<li><a href="/probe/%s">%s —— %s</a></li>' % (vid, vid, spec["label"])
+        for vid, spec in PROBE_LAB.items()
+    )
+    return Response(
+        '<!doctype html><html lang="zh-CN"><head><meta charset="utf-8" />'
+        '<meta name="viewport" content="width=device-width, initial-scale=1" />'
+        '<title>PWA 探针实验室</title></head><body style="font:17px/1.7 system-ui,sans-serif;margin:16px;background:#0f1115;color:#eee">'
+        '<h1>PWA 探针实验室</h1><p>依次点开下面每个链接，各停 5 秒以上即可。结果会自己回传，不需要你判断。</p><ol>' + rows + '</ol></body></html>',
+        mimetype="text/html; charset=utf-8",
+    )
+
+
+@app.route("/probe/<vid>")
+def probe_lab_page(vid):
+    spec = PROBE_LAB.get(vid)
+    if not spec:
+        return ("not found", 404)
+    return Response(probe_build_page(vid, spec), mimetype="text/html; charset=utf-8")
+
+
+@app.route("/probe/<vid>.webmanifest")
+def probe_lab_manifest(vid):
+    spec = PROBE_LAB.get(vid)
+    if not spec:
+        return ("not found", 404)
+    return Response(json.dumps(probe_build_manifest(vid, spec), ensure_ascii=False, indent=2), mimetype="application/manifest+json")
 
 
 @app.route("/pwa-probe")
