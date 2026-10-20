@@ -118,6 +118,21 @@ def init_db():
         )
         """
     )
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS level_logs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            source_device_id TEXT,
+            level INTEGER NOT NULL,
+            note TEXT NOT NULL DEFAULT '',
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            deleted_at TEXT
+        )
+        """
+    )
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_level_logs_user_time ON level_logs(user_id, created_at DESC)")
     ensure_column(conn, "inbox_items", "user_id", "ALTER TABLE inbox_items ADD COLUMN user_id INTEGER NOT NULL DEFAULT 1")
     ensure_column(conn, "inbox_items", "source_device_id", "ALTER TABLE inbox_items ADD COLUMN source_device_id TEXT")
     ensure_column(conn, "users", "approval_status", "ALTER TABLE users ADD COLUMN approval_status TEXT NOT NULL DEFAULT 'approved'")
@@ -1147,6 +1162,168 @@ def export_json():
         mimetype="application/json; charset=utf-8",
         headers={"Content-Disposition": f"attachment; filename={build_export_filename('json')}"},
     )
+
+
+
+LEVELS = [(0, "没守住"), (25, "勉强"), (50, "一半"), (75, "基本守住"), (100, "稳")]
+LEVEL_VALUES = {v for v, _ in LEVELS}
+
+
+def get_level_logs(user_id, day=None, limit=300):
+    conn = get_conn()
+    sql = ("SELECT id, level, note, created_at, updated_at, source_device_id "
+           "FROM level_logs WHERE user_id = ? AND deleted_at IS NULL")
+    params = [user_id]
+    if day:
+        sql += " AND substr(created_at, 1, 10) = ?"
+        params.append(day)
+    sql += " ORDER BY created_at DESC, id DESC LIMIT ?"
+    params.append(limit)
+    rows = conn.execute(sql, params).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
+def _level_device():
+    device_id = request.cookies.get("qc_device_id")
+    if not device_id:
+        return None
+    device = touch_device(device_id) or get_device(device_id)
+    if not device or not device.get("user_id"):
+        return None
+    if device.get("pending_approval") or device.get("approval_status") != "approved":
+        return None
+    return device
+
+
+def _json_out(payload, status=200):
+    return Response(json.dumps(payload, ensure_ascii=False), status=status, mimetype="application/json")
+
+
+def _level_item(conn, item_id, user_id):
+    row = conn.execute(
+        "SELECT id, level, note, created_at FROM level_logs WHERE id = ? AND user_id = ? AND deleted_at IS NULL",
+        (item_id, user_id),
+    ).fetchone()
+    return dict(row) if row else None
+
+
+WEEKDAY_CN = ["周一", "周二", "周三", "周四", "周五", "周六", "周日"]
+
+
+def get_level_groups(user_id, limit=500):
+    items = get_level_logs(user_id, limit=limit)
+    groups = []
+    for it in items:
+        day = (it.get("created_at") or "")[:10]
+        if not groups or groups[-1]["day"] != day:
+            groups.append({"day": day, "items": []})
+        groups[-1]["items"].append(it)
+    now = datetime.now(CN_TZ)
+    today = now.strftime("%Y-%m-%d")
+    yesterday = (now - timedelta(days=1)).strftime("%Y-%m-%d")
+    for g in groups:
+        if g["day"] == today:
+            g["label"] = "今天"
+        elif g["day"] == yesterday:
+            g["label"] = "昨天"
+        else:
+            try:
+                d = datetime.strptime(g["day"], "%Y-%m-%d")
+                g["label"] = d.strftime("%m-%d") + " " + WEEKDAY_CN[d.weekday()]
+            except ValueError:
+                g["label"] = g["day"]
+    return groups
+
+
+@app.route("/log")
+def level_log_page():
+    device = _level_device()
+    if not device:
+        return redirect(url_for("index"))
+    today = datetime.now(CN_TZ).strftime("%Y-%m-%d")
+    groups = get_level_groups(device["user_id"])
+    today_count = sum(len(g["items"]) for g in groups if g["day"] == today)
+    return render_template("log.html", device=device, groups=groups, today=today,
+                           today_count=today_count, total=len(groups), levels=LEVELS)
+
+
+@app.route("/log/add", methods=["POST"])
+def level_log_add():
+    device = _level_device()
+    if not device:
+        return _json_out({"error": "unauthorized"}, 401)
+    data = request.get_json(silent=True) or request.form
+    try:
+        level = int(data.get("level"))
+    except (TypeError, ValueError):
+        return _json_out({"error": "bad level"}, 400)
+    if level not in LEVEL_VALUES:
+        return _json_out({"error": "bad level"}, 400)
+    note = (data.get("note") or "").strip()[:2000]
+    now = now_local_iso()
+    conn = get_conn()
+    cur = conn.execute(
+        "INSERT INTO level_logs (user_id, source_device_id, level, note, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)",
+        (device["user_id"], device["device_id"], level, note, now, now),
+    )
+    conn.commit()
+    item = conn.execute("SELECT id, level, note, created_at FROM level_logs WHERE id = ?", (cur.lastrowid,)).fetchone()
+    conn.close()
+    return _json_out({"ok": True, "item": dict(item)})
+
+
+@app.route("/log/<int:item_id>/update", methods=["POST"])
+def level_log_update(item_id):
+    device = _level_device()
+    if not device:
+        return _json_out({"error": "unauthorized"}, 401)
+    data = request.get_json(silent=True) or request.form
+    conn = get_conn()
+    current = _level_item(conn, item_id, device["user_id"])
+    if not current:
+        conn.close()
+        return _json_out({"error": "not found"}, 404)
+    level = current["level"]
+    if data.get("level") not in (None, ""):
+        try:
+            level = int(data.get("level"))
+        except (TypeError, ValueError):
+            conn.close()
+            return _json_out({"error": "bad level"}, 400)
+        if level not in LEVEL_VALUES:
+            conn.close()
+            return _json_out({"error": "bad level"}, 400)
+    note = current["note"]
+    if data.get("note") is not None:
+        note = (data.get("note") or "").strip()[:2000]
+    now = now_local_iso()
+    conn.execute(
+        "UPDATE level_logs SET level = ?, note = ?, updated_at = ? WHERE id = ? AND user_id = ?",
+        (level, note, now, item_id, device["user_id"]),
+    )
+    conn.commit()
+    item = _level_item(conn, item_id, device["user_id"])
+    conn.close()
+    return _json_out({"ok": True, "item": item})
+
+
+@app.route("/log/<int:item_id>/delete", methods=["POST"])
+def level_log_delete(item_id):
+    device = _level_device()
+    if not device:
+        return _json_out({"error": "unauthorized"}, 401)
+    now = now_local_iso()
+    conn = get_conn()
+    cur = conn.execute(
+        "UPDATE level_logs SET deleted_at = ?, updated_at = ? WHERE id = ? AND user_id = ? AND deleted_at IS NULL",
+        (now, now, item_id, device["user_id"]),
+    )
+    conn.commit()
+    conn.close()
+    if cur.rowcount == 0:
+        return _json_out({"error": "not found"}, 404)
+    return _json_out({"ok": True})
 
 
 if __name__ == "__main__":

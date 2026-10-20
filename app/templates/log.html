@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#0f1115" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="完成度" />
+  <title>完成度 · 记一下</title>
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <link rel="stylesheet" href="/static/style.css" />
+  <style>
+    :root { --bg:#0f1115; --card:#171a21; --line:#252a34; --text:#e8ebf0; --muted:#8b93a3; }
+    * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+    body { margin:0; background:var(--bg); color:var(--text); font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif; }
+    .wrap { max-width:640px; margin:0 auto; padding:calc(12px + env(safe-area-inset-top)) 16px calc(28px + env(safe-area-inset-bottom)); }
+    .top { display:flex; justify-content:space-between; align-items:flex-start; gap:12px; margin-bottom:16px; }
+    .top h1 { font-size:19px; margin:0 0 4px; letter-spacing:.5px; }
+    .meta { color:var(--muted); font-size:13px; }
+    .top a { color:var(--muted); font-size:13px; text-decoration:none; white-space:nowrap; padding-top:3px; }
+    .levels { display:grid; grid-template-columns:repeat(5,1fr); gap:8px; }
+    .lv { border:1px solid var(--line); background:var(--card); border-radius:14px; padding:15px 0 11px; text-align:center; color:var(--text); font:inherit; cursor:pointer; transition:transform .06s ease; }
+    .lv:active { transform:scale(.95); }
+    .lv .n { display:block; font-size:22px; font-weight:700; line-height:1.1; font-variant-numeric:tabular-nums; }
+    .lv .t { display:block; font-size:11px; color:var(--muted); margin-top:5px; }
+    .lv[data-lv="0"] { border-color:#333a47; } .lv[data-lv="0"] .n { color:#9aa3b2; }
+    .lv[data-lv="25"] { border-color:#5a4a2a; } .lv[data-lv="25"] .n { color:#e0b25a; }
+    .lv[data-lv="50"] { border-color:#2c4a63; } .lv[data-lv="50"] .n { color:#5aa9e6; }
+    .lv[data-lv="75"] { border-color:#2b5a52; } .lv[data-lv="75"] .n { color:#4fc3a1; }
+    .lv[data-lv="100"] { border-color:#2f5c36; } .lv[data-lv="100"] .n { color:#63d68a; }
+    .hint { color:var(--muted); font-size:12px; margin:10px 2px 20px; }
+    .day-group { margin-bottom:16px; }
+    .list-head { display:flex; justify-content:space-between; align-items:baseline; margin:0 2px 8px; color:var(--muted); font-size:12px; }
+    .list-head .day { color:#c3c9d4; font-size:13px; font-weight:600; }
+    ul.rows { list-style:none; margin:0; padding:0; }
+    .row { display:flex; gap:10px; align-items:flex-start; background:var(--card); border:1px solid var(--line); border-radius:12px; padding:10px 12px; margin-bottom:8px; }
+    .row .time { color:var(--muted); font-size:12px; padding-top:3px; min-width:40px; font-variant-numeric:tabular-nums; }
+    .chip { font-size:12px; font-weight:700; padding:2px 8px; border-radius:999px; background:#20242d; border:1px solid var(--line); }
+    .row .body { flex:1; min-width:0; cursor:pointer; }
+    .row .note { font-size:14px; line-height:1.5; word-break:break-word; white-space:pre-wrap; }
+    .row .addnote { color:#59606e; font-size:13px; }
+    .empty { color:var(--muted); font-size:13px; padding:18px 4px; }
+    .toast { position:fixed; left:50%; transform:translateX(-50%); bottom:calc(18px + env(safe-area-inset-bottom)); background:#232833; border:1px solid #333a47; color:var(--text); padding:10px 14px; border-radius:999px; font-size:13px; display:none; align-items:center; gap:10px; box-shadow:0 8px 24px rgba(0,0,0,.35); z-index:20; }
+    .toast.show { display:flex; }
+    .toast button { background:none; border:0; color:#5aa9e6; font:inherit; padding:0; cursor:pointer; }
+    .editor { background:var(--card); border:1px solid #3a4252; border-radius:12px; padding:10px; margin-bottom:8px; }
+    .editor .lvrow { display:grid; grid-template-columns:repeat(5,1fr); gap:6px; margin-bottom:8px; }
+    .editor .lvrow button { border:1px solid var(--line); background:#1b1f27; color:var(--text); border-radius:9px; padding:9px 0; font:inherit; font-size:14px; cursor:pointer; }
+    .editor .lvrow button.on { border-color:#5aa9e6; color:#5aa9e6; }
+    .editor textarea { width:100%; min-height:62px; background:#12151b; color:var(--text); border:1px solid var(--line); border-radius:9px; padding:8px 10px; font:inherit; font-size:14px; resize:vertical; }
+    .editor .acts { display:flex; gap:8px; justify-content:flex-end; margin-top:8px; }
+    .editor .acts button { border:1px solid var(--line); background:#1b1f27; color:var(--text); border-radius:9px; padding:8px 14px; font:inherit; font-size:13px; cursor:pointer; }
+    .editor .acts .save { background:#1f4b32; border-color:#2f6b45; color:#9be7b4; }
+    .editor .acts .del { background:#3a1f22; border-color:#5c2b30; color:#e79aa2; margin-right:auto; }
+    @media (min-width:720px){ .lv .n{font-size:26px;} }
+  </style>
+</head>
+<body data-today="{{ today }}">
+<div class="wrap">
+  <div class="top">
+    <div>
+      <h1>完成度</h1>
+      <div class="meta">{{ today }} · 今天 <span id="count">{{ today_count }}</span> 条 · 共 {{ total }} 天</div>
+    </div>
+    <a href="/">记一下 →</a>
+  </div>
+
+  <div class="levels" id="levels">
+    {% for lv, label in levels %}
+    <button class="lv" data-lv="{{ lv }}" type="button">
+      <span class="n">{{ lv }}</span>
+      <span class="t">{{ label }}</span>
+    </button>
+    {% endfor %}
+  </div>
+  <div class="hint">点一下直接存，不用打字；文字可以之后再补。</div>
+
+  <div id="groups">
+    {% for g in groups %}
+    <div class="day-group" data-day="{{ g.day }}">
+      <div class="list-head">
+        <span class="day">{{ g.label }}</span>
+        <span>{% if loop.first %}点一行可改档位或补一句{% else %}{{ g['items']|length }} 条{% endif %}</span>
+      </div>
+      <ul class="rows">
+        {% for it in g['items'] %}
+        <li class="row" data-id="{{ it.id }}" data-level="{{ it.level }}" data-note="{{ it.note }}" data-created="{{ it.created_at }}">
+          <span class="time">{{ it.created_at[11:16] }}</span>
+          <span class="chip">{{ it.level }}</span>
+          <span class="body"><span class="note{% if not it.note %} addnote{% endif %}">{{ it.note or '＋写一句' }}</span></span>
+        </li>
+        {% endfor %}
+      </ul>
+    </div>
+    {% endfor %}
+  </div>
+  <div class="empty" id="empty"{% if groups %} style="display:none"{% endif %}>还没有记录，点上面的档位记第一条。</div>
+</div>
+
+<div class="toast" id="toast"><span id="toast-text"></span><button type="button" id="undo">撤销</button></div>
+
+<script src="/static/log.js?v=20261021b"></script>
+</body>
+</html>

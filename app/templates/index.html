@@ -14,6 +14,21 @@
   <title>记一下</title>
   <script src="https://unpkg.com/htmx.org@1.9.12"></script>
   <link rel="stylesheet" href="/static/style.css" />
+  <style>
+    .level-entry { display:flex; align-items:center; gap:12px; margin:0 0 18px; padding:14px 16px; border:1px solid #2f3a46; border-radius:14px; background:linear-gradient(180deg,#1a2028,#161a21); color:#e8ebf0; text-decoration:none; }
+    .level-entry:active { transform:scale(.995); }
+    .level-entry-main { display:flex; flex-direction:column; gap:4px; flex:1; min-width:0; }
+    .level-entry-title { font-size:15px; font-weight:700; letter-spacing:.3px; }
+    .level-entry-sub { font-size:12px; color:#8b93a3; }
+    .level-entry-dots { display:flex; gap:3px; }
+    .level-entry-dots i { width:6px; height:18px; border-radius:3px; background:#3a4453; display:block; }
+    .level-entry-dots i:nth-child(1){ background:#4a5361; }
+    .level-entry-dots i:nth-child(2){ background:#7a6533; }
+    .level-entry-dots i:nth-child(3){ background:#2c5f86; }
+    .level-entry-dots i:nth-child(4){ background:#2b6f63; }
+    .level-entry-dots i:nth-child(5){ background:#2f7a44; }
+    .level-entry-arrow { color:#8b93a3; font-size:16px; }
+  </style>
 </head>
 <body>
   <main class="container compact-page">
@@ -53,6 +68,15 @@
         </div>
       </form>
     </section>
+
+    <a class="level-entry" href="/log">
+      <span class="level-entry-main">
+        <span class="level-entry-title">今天守住了吗</span>
+        <span class="level-entry-sub">0 · 25 · 50 · 75 · 100　点一下记，不用打字</span>
+      </span>
+      <span class="level-entry-dots"><i></i><i></i><i></i><i></i><i></i></span>
+      <span class="level-entry-arrow">→</span>
+    </a>
 
     <section id="capture-result">
       {% if device and device.approval_status == 'approved' and not device.pending_approval and items %}
