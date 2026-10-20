@@ -52,6 +52,8 @@
     .editor .acts button { border:1px solid var(--line); background:#1b1f27; color:var(--text); border-radius:9px; padding:8px 14px; font:inherit; font-size:13px; cursor:pointer; }
     .editor .acts .save { background:#1f4b32; border-color:#2f6b45; color:#9be7b4; }
     .editor .acts .del { background:#3a1f22; border-color:#5c2b30; color:#e79aa2; margin-right:auto; }
+    .more { text-align:center; margin:6px 0 4px; }
+    .more a { color:var(--muted); font-size:12px; text-decoration:none; }
     @media (min-width:720px){ .lv .n{font-size:26px;} }
   </style>
 </head>
@@ -60,7 +62,7 @@
   <div class="top">
     <div>
       <h1>完成度</h1>
-      <div class="meta">{{ today }} · 今天 <span id="count">{{ today_count }}</span> 条 · 共 {{ total }} 天</div>
+      <div class="meta">{{ today }} · 今天 <span id="count">{{ today_count }}</span> 条 · 最近 {{ days }} 天</div>
     </div>
     <a href="/">记一下 →</a>
   </div>
@@ -96,6 +98,11 @@
   </div>
   <div class="empty" id="empty"{% if groups %} style="display:none"{% endif %}>还没有记录，点上面的档位记第一条。</div>
 </div>
+  <div class="more">
+    {% if days < 180 %}<a href="/log?days=180">看更早的 →</a>
+    {% elif days < 3650 %}<a href="/log?days=3650">看全部 →</a>
+    {% else %}<a href="/log">只看最近 30 天</a>{% endif %}
+  </div>
 
 <div class="toast" id="toast"><span id="toast-text"></span><button type="button" id="undo">撤销</button></div>
 

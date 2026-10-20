@@ -1169,7 +1169,7 @@ LEVELS = [(0, "没守住"), (25, "勉强"), (50, "一半"), (75, "基本守住")
 LEVEL_VALUES = {v for v, _ in LEVELS}
 
 
-def get_level_logs(user_id, day=None, limit=300):
+def get_level_logs(user_id, day=None, since=None, limit=300):
     conn = get_conn()
     sql = ("SELECT id, level, note, created_at, updated_at, source_device_id "
            "FROM level_logs WHERE user_id = ? AND deleted_at IS NULL")
@@ -1177,6 +1177,9 @@ def get_level_logs(user_id, day=None, limit=300):
     if day:
         sql += " AND substr(created_at, 1, 10) = ?"
         params.append(day)
+    if since:
+        sql += " AND created_at >= ?"
+        params.append(since)
     sql += " ORDER BY created_at DESC, id DESC LIMIT ?"
     params.append(limit)
     rows = conn.execute(sql, params).fetchall()
@@ -1211,8 +1214,10 @@ def _level_item(conn, item_id, user_id):
 WEEKDAY_CN = ["周一", "周二", "周三", "周四", "周五", "周六", "周日"]
 
 
-def get_level_groups(user_id, limit=500):
-    items = get_level_logs(user_id, limit=limit)
+def get_level_groups(user_id, days=30, limit=2000):
+    now = datetime.now(CN_TZ)
+    cutoff = (now - timedelta(days=max(days, 1) - 1)).strftime("%Y-%m-%dT00:00:00")
+    items = get_level_logs(user_id, since=cutoff, limit=limit)
     groups = []
     for it in items:
         day = (it.get("created_at") or "")[:10]
@@ -1242,9 +1247,11 @@ def level_log_page():
     if not device:
         return redirect(url_for("index"))
     today = datetime.now(CN_TZ).strftime("%Y-%m-%d")
-    groups = get_level_groups(device["user_id"])
+    days = request.args.get("days", type=int) or 30
+    days = max(1, min(days, 3650))
+    groups = get_level_groups(device["user_id"], days=days)
     today_count = sum(len(g["items"]) for g in groups if g["day"] == today)
-    return render_template("log.html", device=device, groups=groups, today=today,
+    return render_template("log.html", device=device, groups=groups, today=today, days=days,
                            today_count=today_count, total=len(groups), levels=LEVELS)
 
 
