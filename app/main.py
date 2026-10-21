@@ -1151,6 +1151,10 @@ def get_levels_for_api(user_id, since_iso=None, limit=5000):
 @app.route("/api/records")
 def api_records():
     token = request.args.get("token", "")
+    if not token:
+        auth_header = request.headers.get("Authorization", "")
+        if auth_header.lower().startswith("bearer "):
+            token = auth_header[7:].strip()
     since = request.args.get("since", "")
     user = get_user_by_token(token)
     if not user:
