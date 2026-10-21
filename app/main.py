@@ -1110,6 +1110,44 @@ def add_item():
     return render_template("_capture_result.html", added_count=added_count)
 
 
+def parse_since_cutoff(since):
+    """把 since 解析成 ISO 时间下限；支持 30m / 24h / 7d / 2026-10-01 / 完整 ISO。"""
+    if not since:
+        return None
+    raw = str(since).strip()
+    if not raw:
+        return None
+    now = datetime.now(CN_TZ)
+    try:
+        if re.fullmatch(r"\d{4}-\d{2}-\d{2}", raw):
+            return raw + "T00:00:00"
+        if len(raw) > 1 and raw[-1] in ("m", "h", "d") and raw[:-1].isdigit():
+            n = int(raw[:-1])
+            delta = {"m": timedelta(minutes=n), "h": timedelta(hours=n), "d": timedelta(days=n)}[raw[-1]]
+            return (now - delta).replace(microsecond=0).isoformat()
+        dt = datetime.fromisoformat(raw.replace("Z", "+00:00"))
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=CN_TZ)
+        return dt.isoformat()
+    except Exception:
+        return None
+
+
+def get_levels_for_api(user_id, since_iso=None, limit=5000):
+    conn = get_conn()
+    sql = ("SELECT id, level, note, created_at, updated_at FROM level_logs "
+           "WHERE user_id = ? AND deleted_at IS NULL")
+    params = [user_id]
+    if since_iso:
+        sql += " AND created_at >= ?"
+        params.append(since_iso)
+    sql += " ORDER BY created_at ASC, id ASC LIMIT ?"
+    params.append(limit)
+    rows = conn.execute(sql, params).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
 @app.route("/api/records")
 def api_records():
     token = request.args.get("token", "")
@@ -1128,7 +1166,15 @@ def api_records():
             return Response(json.dumps({"error": "IP not allowed"}), status=403, mimetype="application/json; charset=utf-8")
     conn.close()
     records = get_records_by_time(user["id"], since if since else None)
-    return Response(json.dumps({"user": user["name"], "count": len(records), "records": records}, ensure_ascii=False), mimetype="application/json")
+    levels = get_levels_for_api(user["id"], parse_since_cutoff(since))
+    payload = {
+        "user": user["name"],
+        "count": len(records),
+        "records": records,
+        "level_count": len(levels),
+        "levels": levels,
+    }
+    return Response(json.dumps(payload, ensure_ascii=False), mimetype="application/json")
 
 
 @app.route("/export.csv")
